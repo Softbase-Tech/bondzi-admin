@@ -1,26 +1,96 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Bondzi admin — Tailwind v4 theme.
+ *
+ * Brand alignment: this surface shares colors with the marketing site
+ * and the mobile app so admins, students, and visitors see one
+ * identity. Source values:
+ *   - Mobile (tailwind.config.js): pm-orange #FF6B35, pm-yellow #FFD93D,
+ *     pm-navy #1A1A2E, semantic green/red/purple.
+ *   - Website (app/globals.css):   --orange #FF6B35, --orange-deep
+ *     #D44B1A, --yellow #FFD93D.
+ *
+ * For the admin we keep slate neutrals (data-dense tables read better
+ * against cool greys than the cream "paper" of the marketing site)
+ * but adopt the orange primary so every CTA / focus ring / active
+ * nav state matches the rest of the product. CSS-first config because
+ * Tailwind v4 reads `@theme` directly (no tailwind.config.js).
+ */
+@theme {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --color-background: #ffffff;
+  --color-foreground: #0f172a; /* slate-900 */
+  --color-muted: #f8fafc; /* slate-50 */
+  --color-muted-foreground: #64748b; /* slate-500 */
+  --color-border: #e2e8f0; /* slate-200 */
+  --color-input: #e2e8f0;
+  --color-ring: #ff6b35; /* bondzi orange */
+
+  /* Brand primary — Bondzi orange. */
+  --color-primary: #ff6b35;
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: #e55a26; /* mobile pm-orange-dark */
+  --color-primary-deep: #d44b1a; /* website --orange-deep */
+
+  --color-secondary: #f1f5f9; /* slate-100 */
+  --color-secondary-foreground: #0f172a;
+
+  /* Soft brand surfaces — hover backgrounds, active nav rows, tag
+     pills. Pale enough to layer on white tables without stealing
+     focus from data. */
+  --color-accent: #fff0eb; /* mobile pm-orange-light */
+  --color-accent-foreground: #d44b1a;
+
+  /* Secondary brand accents — used sparingly for milestone / XP
+     affordances. The XP economy pages reach for the purple. */
+  --color-yellow: #ffd93d;
+  --color-yellow-soft: #fffbeb;
+  --color-navy: #1a1a2e;
+  --color-navy-mid: #2d2d4e;
+  --color-xp: #9b5de5;
+  --color-xp-soft: #f3ebff;
+
+  /* Semantic — hue-aligned with mobile so a "correct/wrong" feels
+     identical across surfaces. */
+  --color-success: #06d6a0; /* mobile pm-correct */
+  --color-warning: #f59e0b; /* amber-500 (kept conventional) */
+  --color-destructive: #ff4365; /* mobile pm-wrong */
+  --color-destructive-foreground: #ffffff;
+
+  --radius: 0.5rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--color-border);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--color-yellow);
+  color: var(--color-foreground);
+}
+
+/* Scrollbar tune for admin density */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

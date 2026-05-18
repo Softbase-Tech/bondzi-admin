@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+
+jobs:
+  lint-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Next 16 build validates every page compiles + type-checks with the
+      # real compiler (stricter than `tsc` alone for server/client boundary
+      # issues). Uses throwaway env vars so the build doesn't fail on missing
+      # secrets — we're only validating that nothing broke at compile time.
+      - name: Build
+        run: npm run build
+        env:
+          NEXTAUTH_SECRET: ci-build-secret-do-not-use-in-prod
+          NEXTAUTH_URL: http://localhost:3000
+          BACKEND_URL: http://localhost:9000/api/v1
+          NEXT_PUBLIC_API_URL: http://localhost:9000/api/v1
