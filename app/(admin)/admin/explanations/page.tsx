@@ -48,7 +48,6 @@ export default function ExplanationsPage() {
     () => ({
       examType,
       subjectId: subjectId === "all" ? undefined : subjectId,
-      hasExplanation: false,
       page,
       limit,
     }),
@@ -65,11 +64,12 @@ export default function ExplanationsPage() {
     queryKey: QK.QUESTIONS_LIST(filters),
     queryFn: () =>
       unwrap<Paginated<Question>>(
-        // QuestionsController is mounted at `/questions` (not under /admin)
-        // — see backend src/modules/questions/questions.controller.ts. The
-        // `/admin/questions/...` paths that DO exist (flags, etc.) live on
-        // AdminController and aren't a CRUD list endpoint.
-        api.get("/questions", { params: filters }),
+        // Purpose-built endpoint: paginated list of active questions with
+        // `explanation IS NULL`. Backed by
+        // AdminExplanationsService.listPending — supports examType +
+        // subjectId filters. The public /questions endpoint deliberately
+        // doesn't expose `hasExplanation` (it's an admin-only concern).
+        api.get("/admin/explanations/pending", { params: filters }),
       ),
   });
 

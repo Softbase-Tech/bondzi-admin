@@ -17,6 +17,8 @@ declare module "next-auth" {
     role: UserRole;
     accessToken: string;
     refreshToken: string;
+    /** Unix ms — when the access token from the backend will expire. */
+    accessTokenExpires: number;
   }
 }
 
