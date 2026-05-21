@@ -65,7 +65,11 @@ export default function ExplanationsPage() {
     queryKey: QK.QUESTIONS_LIST(filters),
     queryFn: () =>
       unwrap<Paginated<Question>>(
-        api.get("/admin/questions", { params: filters }),
+        // QuestionsController is mounted at `/questions` (not under /admin)
+        // — see backend src/modules/questions/questions.controller.ts. The
+        // `/admin/questions/...` paths that DO exist (flags, etc.) live on
+        // AdminController and aren't a CRUD list endpoint.
+        api.get("/questions", { params: filters }),
       ),
   });
 
