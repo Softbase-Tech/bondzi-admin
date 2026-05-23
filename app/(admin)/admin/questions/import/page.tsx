@@ -29,7 +29,7 @@ const TEMPLATE = `[
       { "label": "A", "body": "x = 3", "isCorrect": false },
       { "label": "B", "body": "x = 4", "isCorrect": true },
       { "label": "C", "body": "x = 5", "isCorrect": false },
-      { "label": "D", "body": "x = 6", "isCorrect": false }
+      { "label": "D", "body": "x = 6", "isCorrect": false, "imageUrl": "https://… (optional, for image-as-choice questions)" }
     ],
     "explanation": "Subtract 3 from both sides, then divide by 2.",
     "explanationExamples": [

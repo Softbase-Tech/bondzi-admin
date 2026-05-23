@@ -163,6 +163,7 @@ export function QuestionForm({ mode, initial }: Props) {
                   options.append({
                     label: String.fromCharCode(65 + options.fields.length),
                     body: "",
+                    imageUrl: "",
                     isCorrect: false,
                   })
                 }
@@ -217,6 +218,28 @@ export function QuestionForm({ mode, initial }: Props) {
                   }
                   placeholder={`Option ${i + 1} body — wrap math in $…$`}
                 />
+                {/* Image options — used for visual-recognition past papers
+                    where the choices are shapes / diagrams / pictures.
+                    Optional: leave blank for plain text options. */}
+                <div className="flex items-start gap-2">
+                  <Input
+                    placeholder="Optional image URL (https://…)"
+                    {...form.register(`options.${i}.imageUrl`)}
+                    className="flex-1"
+                  />
+                  {form.watch(`options.${i}.imageUrl`) ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={form.watch(`options.${i}.imageUrl`) || ""}
+                      alt={`Option ${field.label} preview`}
+                      className="h-10 w-10 rounded border border-slate-200 object-contain bg-white"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.visibility =
+                          "hidden";
+                      }}
+                    />
+                  ) : null}
+                </div>
               </div>
             ))}
             {form.formState.errors.options?.message && (
