@@ -260,9 +260,20 @@ export function QuestionForm({ mode, initial }: Props) {
             <Label>Exam type</Label>
             <Select
               value={form.watch("examType")}
-              onValueChange={(v: "bece" | "wassce") =>
-                form.setValue("examType", v)
-              }
+              onValueChange={(v: "bece" | "wassce") => {
+                form.setValue("examType", v);
+                // Subjects are scoped per exam type — a BECE subject id is
+                // invalid the moment exam type flips to WASSCE. Clear the
+                // current pick so the admin must reselect from the now-
+                // filtered list rather than submit a cross-exam combo.
+                const current = form.getValues("subjectId");
+                const stillValid = (subjects ?? []).some(
+                  (s) => s.id === current && s.examType === v,
+                );
+                if (!stillValid) {
+                  form.setValue("subjectId", "", { shouldValidate: true });
+                }
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -283,11 +294,13 @@ export function QuestionForm({ mode, initial }: Props) {
                 <SelectValue placeholder="Pick a subject" />
               </SelectTrigger>
               <SelectContent>
-                {(subjects ?? []).map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
+                {(subjects ?? [])
+                  .filter((s) => s.examType === form.watch("examType"))
+                  .map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
