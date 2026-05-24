@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { MathEditor } from "./math-editor";
 import { StimulusPicker } from "@/components/admin/stimuli/stimulus-picker";
-import type { Question, Subject } from "@/types/api";
+import type { Question, Subject, Topic } from "@/types/api";
 
 interface Props {
   mode: "create" | "edit";
@@ -88,6 +88,17 @@ export function QuestionForm({ mode, initial }: Props) {
   });
 
   const options = useFieldArray({ control: form.control, name: "options" });
+
+  // Topics are scoped to a subject (which is itself scoped to an exam type),
+  // so the cascade is exam type → subject → topic. We only fetch once a
+  // subject is picked; before that the topic select shows an empty/disabled
+  // state with a hint to pick a subject first.
+  const subjectId = form.watch("subjectId");
+  const { data: topics } = useQuery({
+    queryKey: QK.SUBJECT_TOPICS(subjectId || ""),
+    queryFn: () => unwrap<Topic[]>(api.get(`/subjects/${subjectId}/topics`)),
+    enabled: !!subjectId,
+  });
 
   const mutation = useMutation({
     mutationFn: (data: QuestionFormData) => {
@@ -266,12 +277,15 @@ export function QuestionForm({ mode, initial }: Props) {
                 // invalid the moment exam type flips to WASSCE. Clear the
                 // current pick so the admin must reselect from the now-
                 // filtered list rather than submit a cross-exam combo.
+                // Topic is scoped to subject, so clearing subject also
+                // invalidates the topic.
                 const current = form.getValues("subjectId");
                 const stillValid = (subjects ?? []).some(
                   (s) => s.id === current && s.examType === v,
                 );
                 if (!stillValid) {
                   form.setValue("subjectId", "", { shouldValidate: true });
+                  form.setValue("topicId", "", { shouldValidate: true });
                 }
               }}
             >
@@ -288,7 +302,12 @@ export function QuestionForm({ mode, initial }: Props) {
             <Label>Subject</Label>
             <Select
               value={form.watch("subjectId")}
-              onValueChange={(v) => form.setValue("subjectId", v)}
+              onValueChange={(v) => {
+                form.setValue("subjectId", v, { shouldValidate: true });
+                // Topic belongs to the previous subject — clear so we don't
+                // POST a topicId that no longer corresponds to subjectId.
+                form.setValue("topicId", "", { shouldValidate: true });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Pick a subject" />
@@ -303,6 +322,49 @@ export function QuestionForm({ mode, initial }: Props) {
                   ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Topic</Label>
+            <div className="flex items-center gap-2">
+              <Select
+                value={form.watch("topicId") || ""}
+                onValueChange={(v) =>
+                  form.setValue("topicId", v, { shouldValidate: true })
+                }
+                disabled={!subjectId}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue
+                    placeholder={
+                      !subjectId
+                        ? "Pick a subject first"
+                        : (topics?.length ?? 0) === 0
+                          ? "No topics for this subject"
+                          : "Pick a topic (optional)"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {(topics ?? []).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.watch("topicId") ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    form.setValue("topicId", "", { shouldValidate: true })
+                  }
+                >
+                  Clear
+                </Button>
+              ) : null}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
