@@ -33,7 +33,15 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg outline-none",
+        // `max-h-[calc(100vh-4rem)] overflow-y-auto` is what keeps tall
+        // forms (e.g. the Plans edit modal with 14+ rows) usable on
+        // laptop-sized viewports — without a height bound, the modal
+        // grew past the viewport and the footer/Save button became
+        // unreachable. Scroll lives on the content itself; the Close
+        // button stays pinned because it's `position:absolute` relative
+        // to this `position:fixed` container, which doesn't scroll —
+        // only its child content does.
+        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg max-h-[calc(100vh-4rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-lg outline-none",
         className,
       )}
       {...props}
