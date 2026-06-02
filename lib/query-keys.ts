@@ -63,6 +63,20 @@ export const QK = {
   PLANS_PUBLIC: (country?: string) =>
     ["plans", "public", country ?? "all"] as const,
 
+  // Promo codes (admin)
+  PROMO_CODES_LIST: () => ["promo-codes", "list"] as const,
+  PROMO_CODE_DETAIL: (id: string) => ["promo-codes", id] as const,
+
+  // Legal pages (admin)
+  LEGAL_PAGES_LIST: () => ["legal-pages", "list"] as const,
+  LEGAL_PAGE_DETAIL: (slug: string) => ["legal-pages", slug] as const,
+
+  // Entitlements (admin)
+  ENTITLEMENTS_FOR_USER: (userId: string) =>
+    ["entitlements", "user", userId] as const,
+  ENTITLEMENTS_AUDIT_FOR_USER: (userId: string) =>
+    ["entitlements", "user", userId, "audit"] as const,
+
   // XP economy
   XP_RATE_CONFIG: () => ["xp-economy", "rates"] as const,
   XP_REDEMPTION_CONFIG: () => ["xp-economy", "redemption-tiers"] as const,

@@ -32,6 +32,12 @@ function fromPlan(plan: SubscriptionPlan): PlanFormValues {
     countryCode: plan.countryCode,
     currency: plan.currency,
     provider: plan.provider,
+    // account / level / paymentKind are immutable per row — rendered as
+    // read-only via `lockStructural` and never sent in the PATCH body.
+    account: plan.account,
+    level: plan.level,
+    paymentKind: plan.paymentKind,
+    vatRatePct: String(plan.vatRatePct ?? 0),
     // Prices come back as numbers from the backend (NumericColumnTransformer);
     // the form values are strings because the underlying <Input type="number">
     // emits strings on change. Stringify so the form's resolver doesn't
@@ -64,6 +70,10 @@ export function EditPlanModal({ open, onOpenChange, plan }: Props) {
             countryCode: "",
             currency: "",
             provider: "",
+            account: "pro",
+            level: "wassce",
+            paymentKind: "recurring",
+            vatRatePct: "0",
             monthlyPrice: "",
             sixMonthPrice: "",
             annualPrice: "",
@@ -94,10 +104,14 @@ export function EditPlanModal({ open, onOpenChange, plan }: Props) {
   const mutation = useMutation({
     mutationFn: (vals: PlanFormValues) => {
       if (!plan) throw new Error("No plan loaded");
+      // account / level / paymentKind are NOT sent — the backend's
+      // UpdatePlanDto doesn't accept them. Mutating those would be a
+      // different product and goes through Create.
       return unwrap<SubscriptionPlan>(
         api.patch(`/admin/plans/${plan.id}`, {
           name: vals.name.trim(),
           description: vals.description.trim() || null,
+          vatRatePct: Number(vals.vatRatePct || 0),
           monthlyPrice: Number(vals.monthlyPrice),
           sixMonthPrice: Number(vals.sixMonthPrice),
           annualPrice: Number(vals.annualPrice),

@@ -24,11 +24,13 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 export const EXAM_TYPE_LABEL: Record<ExamType, string> = {
   bece: "BECE",
   wassce: "WASSCE",
+  novdec: "NOVDEC",
 };
 
 export const EXAM_TYPE_TONE: Record<ExamType, string> = {
   bece: "bg-blue-50 text-blue-700 border-blue-200",
   wassce: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  novdec: "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 /**
@@ -79,6 +81,7 @@ export const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   trial: "Trial",
   past_due: "Past due",
   xp_credited: "XP credited",
+  refunded: "Refunded",
 };
 
 export const STATUS_TONE: Record<SubscriptionStatus, string> = {
@@ -88,6 +91,7 @@ export const STATUS_TONE: Record<SubscriptionStatus, string> = {
   trial: "bg-amber-50 text-amber-800 border-amber-200",
   past_due: "bg-rose-50 text-rose-700 border-rose-200",
   xp_credited: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  refunded: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 export const QUESTION_STATUS_LABEL: Record<QuestionStatus, string> = {

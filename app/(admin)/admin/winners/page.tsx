@@ -132,6 +132,21 @@ export default function WinnersPage() {
                   Select BECE winners
                 </Button>
               )}
+              {metrics?.winnersPendingWeeklyNovdec && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setModal({
+                      examType: "novdec",
+                      periodType: "weekly",
+                      periodStart,
+                    })
+                  }
+                >
+                  Select NOVDEC winners
+                </Button>
+              )}
             </div>
           </AlertDescription>
         </Alert>
@@ -161,6 +176,7 @@ export default function WinnersPage() {
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="bece">BECE</SelectItem>
               <SelectItem value="wassce">WASSCE</SelectItem>
+              <SelectItem value="novdec">NOVDEC</SelectItem>
             </SelectContent>
           </Select>
         </div>

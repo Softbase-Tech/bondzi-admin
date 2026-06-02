@@ -64,13 +64,17 @@ export default function DashboardPage() {
 
   const beceCount = metrics?.activeUsersBece ?? 0;
   const wassceCount = metrics?.activeUsersWassce ?? 0;
+  const novdecCount = metrics?.activeUsersNovdec ?? 0;
   const examSplit = [
     { name: "BECE", value: beceCount, fill: "#3b82f6" },
     { name: "WASSCE", value: wassceCount, fill: "#6366f1" },
+    { name: "NOVDEC", value: novdecCount, fill: "#f97316" },
   ];
 
   const winnersPending =
-    metrics?.winnersPendingWeeklyBece || metrics?.winnersPendingWeeklyWassce;
+    metrics?.winnersPendingWeeklyBece ||
+    metrics?.winnersPendingWeeklyWassce ||
+    metrics?.winnersPendingWeeklyNovdec;
 
   return (
     <div className="flex flex-col gap-6">
@@ -255,7 +259,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">BECE vs WASSCE</CardTitle>
+            <CardTitle className="text-base">Exam levels</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -297,6 +301,13 @@ export default function DashboardPage() {
                     {formatNumber(wassceCount)}
                   </span>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
+                  NOVDEC&nbsp;
+                  <span className="font-semibold">
+                    {formatNumber(novdecCount)}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-600 grid grid-cols-2 gap-2">
@@ -318,7 +329,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div>
-                <div className="text-slate-500">WASSCE questions</div>
+                <div className="text-slate-500">
+                  WASSCE questions
+                  <span className="text-slate-400"> · shared with NOVDEC</span>
+                </div>
                 <div className="font-semibold text-slate-900">
                   {formatNumber(metrics?.questionsWassce ?? 0)}
                   <span className="ml-1 text-slate-500 font-normal">

@@ -28,6 +28,13 @@ const DEFAULTS: PlanFormValues = {
   countryCode: "GH",
   currency: "GHS",
   provider: "paystack",
+  // Default to Pro × WASSCE: the most-common slot to create. Admin can
+  // switch to Plus or another level — switching to Plus auto-zeros the
+  // cadence prices via the form's onValueChange handler.
+  account: "pro",
+  level: "wassce",
+  paymentKind: "recurring",
+  vatRatePct: "15",
   monthlyPrice: "29.00",
   sixMonthPrice: "150.00",
   annualPrice: "240.00",
@@ -42,24 +49,33 @@ export function CreatePlanModal({ open, onOpenChange }: Props) {
   const form = useForm<PlanFormValues>({ defaultValues: DEFAULTS });
 
   const mutation = useMutation({
-    mutationFn: (values: PlanFormValues) =>
-      unwrap<SubscriptionPlan>(
+    mutationFn: (values: PlanFormValues) => {
+      const isOneTime = values.paymentKind === "one_time";
+      return unwrap<SubscriptionPlan>(
         api.post("/admin/plans", {
           name: values.name.trim(),
           description: values.description.trim() || undefined,
           countryCode: values.countryCode.toUpperCase(),
           currency: values.currency.toUpperCase(),
           provider: values.provider.trim().toLowerCase(),
+          account: values.account,
+          level: values.level,
+          paymentKind: values.paymentKind,
+          vatRatePct: Number(values.vatRatePct || 0),
           monthlyPrice: Number(values.monthlyPrice),
-          sixMonthPrice: Number(values.sixMonthPrice),
-          annualPrice: Number(values.annualPrice),
+          // Backend rejects non-zero cadence prices on one-time plans.
+          // The form already zeroes these when payment kind flips to
+          // one-time, so this is belt-and-braces.
+          sixMonthPrice: isOneTime ? undefined : Number(values.sixMonthPrice),
+          annualPrice: isOneTime ? undefined : Number(values.annualPrice),
           monthlyDurationDays: Number(values.monthlyDurationDays),
           sixMonthDurationDays: Number(values.sixMonthDurationDays),
           annualDurationDays: Number(values.annualDurationDays),
           isDefault: values.isDefault,
-          syncProvider: true,
+          syncProvider: !isOneTime,
         }),
-      ),
+      );
+    },
     onSuccess: (plan) => {
       toast.success(`Plan "${plan.name}" created`);
       qc.invalidateQueries({ queryKey: ["plans"] });

@@ -28,6 +28,7 @@ import {
   billingIntervalTone,
 } from "@/lib/constants";
 import { usePermissions } from "@/hooks/use-permissions";
+import { UserEntitlementsSection } from "@/components/admin/users/user-entitlements-section";
 import type { Subscription, User } from "@/types/api";
 
 interface UserDetailResponse {
@@ -158,6 +159,8 @@ export default function UserDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <UserEntitlementsSection userId={id} />
 
       <Card>
         <CardHeader>

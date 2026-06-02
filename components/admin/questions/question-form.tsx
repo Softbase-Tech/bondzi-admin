@@ -51,7 +51,12 @@ export function QuestionForm({ mode, initial }: Props) {
           subjectId: initial.subjectId,
           topicId: initial.topicId ?? undefined,
           stimulusId: initial.stimulusId ?? null,
-          examType: initial.examType,
+          // NOVDEC isn't a valid question-level value — NOVDEC users
+          // share the WASSCE pool, so no question row carries the
+          // `novdec` tag. The widened `ExamType` includes it for user /
+          // subscription paths, hence the runtime-defensive narrowing.
+          examType:
+            initial.examType === "novdec" ? "wassce" : initial.examType,
           questionType: initial.questionType,
           source: initial.source,
           body: initial.body,

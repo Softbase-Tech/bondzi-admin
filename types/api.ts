@@ -7,8 +7,8 @@
 
 export type UserRole = "student" | "teacher" | "admin" | "superadmin";
 export type AuthProvider = "email" | "google" | "phone";
-export type ExamType = "bece" | "wassce";
-export type SchoolLevel = "jhs" | "shs";
+export type ExamType = "bece" | "wassce" | "novdec";
+export type SchoolLevel = "jhs" | "shs" | "remedial";
 /**
  * Billing cadence on a subscription. A plan row bundles all three — the
  * user picks one at checkout. XP-credited subs carry null here.
@@ -20,7 +20,10 @@ export type SubscriptionStatus =
   | "cancelled"
   | "trial"
   | "past_due"
-  | "xp_credited";
+  | "xp_credited"
+  // Terminal state after a Plus row is refunded out-of-band. The
+  // entitlement is gone but the row stays for audit.
+  | "refunded";
 export type Difficulty = "easy" | "medium" | "hard";
 export type QuestionType =
   | "mcq"
@@ -320,6 +323,14 @@ export interface DashboardMetrics {
 
   activeUsersBece: number;
   activeUsersWassce: number;
+  /**
+   * NOVDEC is a distinct level for billing / leaderboards / entitlements
+   * even though students share the WASSCE question pool. Surfaced as a
+   * separate user count so admins can track Remedial adoption — no
+   * `questionsNovdec` tile because the catalogue number would duplicate
+   * `questionsWassce`.
+   */
+  activeUsersNovdec: number;
   questionsBece: number;
   questionsWassce: number;
   questionsBeceExplained: number;
@@ -332,6 +343,7 @@ export interface DashboardMetrics {
 
   winnersPendingWeeklyBece: boolean;
   winnersPendingWeeklyWassce: boolean;
+  winnersPendingWeeklyNovdec: boolean;
   winnersPeriodEndedAt: string | null;
 }
 
@@ -385,6 +397,20 @@ export interface LeaderboardRow {
  * previous row `isActive=false`. `parentPlanId` points at the immediate
  * predecessor, giving the UI a version chain to render ("Archived v1").
  */
+/**
+ * Plan grade. Drives the entitlement gates in the API + mobile.
+ *  - 'plus' = one-time lifetime per-level access (past papers + AI explanations).
+ *  - 'pro'  = recurring per-level subscription (everything in Plus + AI tests).
+ *  - 'free' is implicit — never a plan row.
+ */
+export type AccountType = 'free' | 'plus' | 'pro';
+
+/** What level the plan unlocks. NOVDEC reuses the WASSCE question pool. */
+export type PlanLevel = 'bece' | 'wassce' | 'novdec';
+
+/** Payment kind. One-time = Plus (lifetime); recurring = Pro (Paystack subscription). */
+export type PaymentKind = 'one_time' | 'recurring';
+
 export interface SubscriptionPlan {
   id: string;
   name: string;
@@ -392,6 +418,30 @@ export interface SubscriptionPlan {
   countryCode: string;
   currency: string;
   provider: string;
+
+  /** Plan grade. `plus` is one-time/lifetime; `pro` is recurring. */
+  account: AccountType;
+
+  /** Exam-platform the plan unlocks. */
+  level: PlanLevel;
+
+  /**
+   * `one_time` (Plus): single charge, lifetime grant, `expires_at = NULL`
+   * on the resulting subscription row. Cadence prices (six-month, annual)
+   * are stored as 0 and never used.
+   *
+   * `recurring` (Pro): Paystack subscription with three cadences (monthly,
+   * six-month, annual). All three prices must be > 0.
+   */
+  paymentKind: PaymentKind;
+
+  /**
+   * VAT (or VAT-equivalent levy stack) baked into the displayed price.
+   * Stored INCLUSIVELY — a `vatRatePct` of 15 on a 200 GHS plan means
+   * the user pays 200 at checkout; the receipt PDF breaks it down into
+   * ~173.91 net + ~26.09 VAT.
+   */
+  vatRatePct: number;
 
   // Numeric on the wire now — backend uses a NumericColumnTransformer
   // on the entity so the JSON serialisation emits real numbers, not
@@ -428,6 +478,72 @@ export interface SubscriptionPlan {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ============================================================================
+// Promo codes
+// ============================================================================
+
+export type PromoDiscountType = "percent" | "fixed";
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string | null;
+  discountType: PromoDiscountType;
+  /** String on the wire (TypeORM numeric column). Cast to Number for math. */
+  discountValue: string;
+  applicableAccount: AccountType | null;
+  applicableLevel: PlanLevel | null;
+  maxRedemptions: number | null;
+  redeemedCount: number;
+  validFrom: string | null;
+  validUntil: string | null;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// Legal pages
+// ============================================================================
+
+export interface LegalPage {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// Entitlements
+// ============================================================================
+
+export interface UserEntitlement {
+  level: PlanLevel;
+  account: AccountType;
+  expiresAt: string | null;
+  subscriptionId: string | null;
+}
+
+/**
+ * Re-using the generic `audit_log` row shape — entitlement-change rows
+ * use action='entitlement.grant'|'entitlement.revoke'|'entitlement.refund'.
+ */
+export interface EntitlementAuditRow {
+  id: string;
+  adminId: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
 }
 
 /** Public catalogue shape returned by GET /plans. */

@@ -53,9 +53,13 @@ interface RowState {
 
 const DEFAULT_MIX = { easy: 30, medium: 50, hard: 20 };
 
+// NOVDEC reuses the WASSCE PM Test pool — students study the same
+// syllabus. Form levels mirror WASSCE so admins can target the same
+// SHS 1/2/3 cohorts.
 const FORM_LEVELS: Record<ExamType, number[]> = {
   bece: [1, 2, 3],
   wassce: [1, 2, 3],
+  novdec: [1, 2, 3],
 };
 
 export function PmTestPanel() {

@@ -19,7 +19,7 @@ export function ExamTypeToggle({ value, onChange, className }: Props) {
         className,
       )}
     >
-      {(["bece", "wassce"] as const).map((opt) => (
+      {(["bece", "wassce", "novdec"] as const).map((opt) => (
         <button
           key={opt}
           type="button"
@@ -33,7 +33,7 @@ export function ExamTypeToggle({ value, onChange, className }: Props) {
               : "text-slate-600 hover:bg-slate-50",
           )}
         >
-          {opt === "bece" ? "BECE" : "WASSCE"}
+          {opt.toUpperCase()}
         </button>
       ))}
     </div>
