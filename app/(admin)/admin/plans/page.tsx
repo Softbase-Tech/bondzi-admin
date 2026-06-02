@@ -369,6 +369,18 @@ function graceWindow(archiveAt: string | null): string | null {
 }
 
 function ProviderCodes({ plan }: { plan: SubscriptionPlan }) {
+  // One-time (Plus) plans are charged as single Paystack transactions —
+  // they don't carry provider plan codes by design. The codes only exist
+  // for recurring (Pro) cadences. Showing "— missing" + "Run Sync" on a
+  // Plus row is wrong: there's nothing to sync, the row is correctly
+  // configured. Render a single explanatory line instead.
+  if (plan.paymentKind === "one_time") {
+    return (
+      <span className="text-[11px] text-slate-500">
+        Charged as one-time — no recurring codes needed
+      </span>
+    );
+  }
   const entries: Array<[string, string | null]> = [
     ["monthly", plan.providerPlanMonthly],
     ["6-month", plan.providerPlanSixMonth],
@@ -413,10 +425,15 @@ function RowActions({
   onArchive: (p: SubscriptionPlan) => void;
   onRollback: (p: SubscriptionPlan) => void;
 }) {
+  // "Missing codes" applies only to recurring (Pro) plans. One-time (Plus)
+  // plans never have provider plan codes — they charge as single
+  // transactions, so showing a "Sync" action for them would invite the
+  // admin to call an endpoint that has nothing to sync.
   const missingCodes =
-    !plan.providerPlanMonthly ||
-    !plan.providerPlanSixMonth ||
-    !plan.providerPlanAnnual;
+    plan.paymentKind !== "one_time" &&
+    (!plan.providerPlanMonthly ||
+      !plan.providerPlanSixMonth ||
+      !plan.providerPlanAnnual);
 
   return (
     <DropdownMenu>
