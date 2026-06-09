@@ -52,6 +52,10 @@ export const QK = {
   // Payments
   PAYMENT_EVENTS: (filters: Record<string, unknown>) =>
     ["payments", "events", filters] as const,
+  PAYMENT_ATTEMPTS: (filters: Record<string, unknown>) =>
+    ["payments", "attempts", filters] as const,
+  BILLING_LOG: (filters: Record<string, unknown>) =>
+    ["billing-log", filters] as const,
   FINANCIAL_EVENTS: (filters: Record<string, unknown>) =>
     ["financial-events", filters] as const,
   SUBSCRIPTIONS_LIST: (filters: Record<string, unknown>) =>

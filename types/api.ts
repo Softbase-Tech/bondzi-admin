@@ -277,6 +277,81 @@ export interface PaymentEvent {
   createdAt: string;
 }
 
+/**
+ * A single checkout attempt — written by SubscriptionsService.initiate
+ * BEFORE Paystack is called. Replaces the old "subscriptions with status
+ * = PAST_DUE" shape that conflated checkout attempts with real
+ * entitlements.
+ */
+export type PaymentAttemptStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "abandoned";
+
+export interface PaymentAttempt {
+  id: string;
+  userId: string;
+  subscriptionId: string | null;
+  planId: string | null;
+  billingInterval: BillingInterval | null;
+  amountMinor: number;
+  amountGhs: number;
+  currency: string;
+  provider: string;
+  providerReference: string;
+  providerEventId: string | null;
+  providerCustomerId: string | null;
+  promoCodeId: string | null;
+  discountAmount: number | null;
+  status: PaymentAttemptStatus;
+  initiatedAt: string;
+  paidAt: string | null;
+  failedAt: string | null;
+  refundedAt: string | null;
+  abandonedAt: string | null;
+  failureReason: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  plan?: {
+    id: string;
+    name: string;
+    account: AccountType;
+    level: ExamType;
+    paymentKind: "one_time" | "recurring";
+  } | null;
+  user?: { id: string; email: string | null; fullName: string | null } | null;
+}
+
+export type BillingLogProcessStatus =
+  | "received"
+  | "success"
+  | "no_matching_payment"
+  | "duplicate"
+  | "error";
+
+export interface BillingLog {
+  id: string;
+  provider: string;
+  eventType: string;
+  providerEventId: string;
+  reference: string | null;
+  userId: string | null;
+  paymentAttemptId: string | null;
+  subscriptionId: string | null;
+  rawPayload: Record<string, unknown>;
+  signature: string | null;
+  normalized: Record<string, unknown> | null;
+  occurredAt: string | null;
+  receivedAt: string;
+  processedAt: string | null;
+  processStatus: BillingLogProcessStatus;
+  processError: string | null;
+  createdAt: string;
+}
+
 export interface QuestionFlag {
   id: string;
   questionId: string;

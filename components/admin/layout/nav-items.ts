@@ -106,8 +106,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
       { href: "/admin/payments", label: "Payments", icon: FileSpreadsheet },
       {
-        href: "/admin/financial-events",
+        href: "/admin/billing-log",
         label: "Billing log",
+        icon: History,
+      },
+      {
+        href: "/admin/financial-events",
+        label: "Financial events",
         icon: History,
       },
       { href: "/admin/referrals", label: "Referrals", icon: Share2 },

@@ -92,14 +92,20 @@ export function EditPlanModal({ open, onOpenChange, plan }: Props) {
   }, [plan, form]);
 
   const values = form.watch();
-  const priceOrDurationChanged = plan
-    ? Number(values.monthlyPrice) !== Number(plan.monthlyPrice) ||
-      Number(values.sixMonthPrice) !== Number(plan.sixMonthPrice) ||
-      Number(values.annualPrice) !== Number(plan.annualPrice) ||
-      Number(values.monthlyDurationDays) !== plan.monthlyDurationDays ||
-      Number(values.sixMonthDurationDays) !== plan.sixMonthDurationDays ||
-      Number(values.annualDurationDays) !== plan.annualDurationDays
-    : false;
+  // One-time (Plus) plans never trigger a version bump: there are no
+  // Paystack plan codes to invalidate, so the backend updates the row
+  // in place. Skip the "new version" UI affordance entirely for Plus,
+  // even when the headline price changes.
+  const isOneTime = plan?.paymentKind === "one_time";
+  const priceOrDurationChanged =
+    !isOneTime && plan
+      ? Number(values.monthlyPrice) !== Number(plan.monthlyPrice) ||
+        Number(values.sixMonthPrice) !== Number(plan.sixMonthPrice) ||
+        Number(values.annualPrice) !== Number(plan.annualPrice) ||
+        Number(values.monthlyDurationDays) !== plan.monthlyDurationDays ||
+        Number(values.sixMonthDurationDays) !== plan.sixMonthDurationDays ||
+        Number(values.annualDurationDays) !== plan.annualDurationDays
+      : false;
 
   const mutation = useMutation({
     mutationFn: (vals: PlanFormValues) => {
