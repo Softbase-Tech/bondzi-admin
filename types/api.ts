@@ -103,6 +103,12 @@ export interface FinancialEvent {
 export interface User {
   id: string;
   fullName: string;
+  /** Public handle (nullable for accounts that predate the username
+   * roll-out — mobile prompts those users to back-fill on next login). */
+  username: string | null;
+  /** ISO timestamp of last username set/change. Powers the 90-day
+   * cooldown display in admin / mobile profile. */
+  usernameChangedAt: string | null;
   email: string | null;
   phone: string | null;
   role: UserRole;
@@ -290,6 +296,28 @@ export type PaymentAttemptStatus =
   | "refunded"
   | "abandoned";
 
+/**
+ * Notification record from the `notifications` table — every push
+ * the platform has ever sent, until the 90-day retention prune.
+ * Re-uses the union NotificationChannel declared higher up.
+ */
+export interface NotificationLogRow {
+  id: string;
+  userId: string | null;
+  channel: NotificationChannel;
+  title: string;
+  body: string;
+  /** Optional payload — carries `{type, sentByAdminId?, deepLink?, ...}`. */
+  data: Record<string, unknown> | null;
+  /** Provider attempted dispatch — null while queued. */
+  sentAt: string | null;
+  /** True once the user opened it in-app. */
+  isRead: boolean;
+  createdAt: string;
+  /** Joined User snapshot — only `fullName` + `email` for ops display. */
+  user?: { id: string; fullName: string; email: string | null } | null;
+}
+
 export interface PaymentAttempt {
   id: string;
   userId: string;
@@ -438,6 +466,55 @@ export interface Paginated<T> {
   items: T[];
   total: number;
   nextCursor: string | null;
+}
+
+/**
+ * One row in the admin per-user exam history table. Mirrors the
+ * backend `listUserExams` shape — keep aligned with
+ * `src/modules/admin/admin.service.ts:listUserExams`.
+ */
+export interface AdminUserExamRow {
+  id: string;
+  examType: ExamType;
+  mode: string;
+  questionPool: string;
+  status: string;
+  score: number | null;
+  totalQuestions: number | null;
+  /** Numeric on the wire (Postgres `numeric` → string). */
+  percentScore: string | null;
+  xpEarned: number;
+  durationSeconds: number | null;
+  startedAt: string;
+  completedAt: string | null;
+  /** Wall-clock minutes between start and complete; null when in-progress. */
+  minutesSpent: number | null;
+  answeredCount: number;
+  correctCount: number;
+  accuracy: number;
+}
+
+export interface AdminUserExamAnswer {
+  id: string;
+  questionId: string;
+  questionPool: string;
+  /** Question stem from the past-paper catalogue; null for PM-Test items. */
+  stem: string | null;
+  subjectName: string | null;
+  year: number | null;
+  selectedOptionId: string | null;
+  selectedOptionLabel: string | null;
+  correctOptionLabel: string | null;
+  typedAnswer: string | null;
+  isCorrect: boolean | null;
+  timeSpentMs: number | null;
+  explanationViewed: boolean;
+  answeredAt: string;
+}
+
+export interface AdminUserExamDetail {
+  exam: AdminUserExamRow & { activeStudyMinutes: number };
+  answers: AdminUserExamAnswer[];
 }
 
 export interface ApiEnvelope<T> {
@@ -819,6 +896,10 @@ export interface Winner {
   id: string;
   userId: string;
   userName: string;
+  /** Public username (when set) — preferred over `userName` for
+   * display on user-visible surfaces. Falls back to `userName`
+   * (legal name) for accounts that haven't back-filled yet. */
+  username: string | null;
   examType: ExamType;
   periodType: LeaderboardPeriodType;
   periodStart: string;
@@ -837,6 +918,20 @@ export interface HallOfFameRow {
   examType: ExamType;
   totalWins: number;
   totalXpFromPrizes: number;
+}
+
+/**
+ * A leaderboard period that has candidates in `leaderboard_entries`
+ * but no `winners` rows yet. Backed by GET /admin/winners/pending-periods.
+ * Used by the Winners page to expose every still-open period, not
+ * just the most recent one — so a missed week remains actionable.
+ */
+export interface PendingWinnerPeriod {
+  examType: ExamType;
+  periodType: LeaderboardPeriodType;
+  /** YYYY-MM-DD. */
+  periodStart: string;
+  candidateCount: number;
 }
 
 // ---------- Ads ----------

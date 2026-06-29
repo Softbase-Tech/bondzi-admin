@@ -7,7 +7,10 @@ export const QK = {
   USERS_LIST: (filters: Record<string, unknown>) =>
     ["users", "list", filters] as const,
   USER_DETAIL: (id: string) => ["users", id] as const,
-  USER_EXAMS: (id: string) => ["users", id, "exams"] as const,
+  USER_EXAMS: (id: string, filters: Record<string, unknown> = {}) =>
+    ["users", id, "exams", filters] as const,
+  USER_EXAM_DETAIL: (id: string, examId: string) =>
+    ["users", id, "exams", examId] as const,
   USER_SUBS: (id: string) => ["users", id, "subscriptions"] as const,
 
   // Questions
@@ -54,6 +57,13 @@ export const QK = {
     ["payments", "events", filters] as const,
   PAYMENT_ATTEMPTS: (filters: Record<string, unknown>) =>
     ["payments", "attempts", filters] as const,
+  /**
+   * Full notification log — every push the platform has ever sent.
+   * Used by /admin/notifications. Auto-pruned to 90 days by
+   * NotificationRetentionJob.
+   */
+  NOTIFICATIONS_LOG: (filters: Record<string, unknown>) =>
+    ["notifications", "log", filters] as const,
   BILLING_LOG: (filters: Record<string, unknown>) =>
     ["billing-log", filters] as const,
   FINANCIAL_EVENTS: (filters: Record<string, unknown>) =>
@@ -103,6 +113,13 @@ export const QK = {
     ["winners", "candidates", filters] as const,
   WINNERS_HALL_OF_FAME: (filters: Record<string, unknown>) =>
     ["winners", "hall-of-fame", filters] as const,
+  /**
+   * Every (exam_type, period_type, period_start) tuple awaiting
+   * winner selection — drives the "Pending periods" card on
+   * /admin/winners so a missed week stays visible.
+   */
+  WINNERS_PENDING_PERIODS: () =>
+    ["winners", "pending-periods"] as const,
 
   // Ads config
   ADS_CONFIG: () => ["ads", "config"] as const,

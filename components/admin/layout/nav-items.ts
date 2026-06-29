@@ -150,6 +150,11 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/plans", label: "Plans", icon: Tags },
       { href: "/admin/config/ads", label: "Ads (P2)", icon: BarChart3 },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
+      {
+        href: "/admin/notifications/log",
+        label: "Notification log",
+        icon: History,
+      },
       { href: "/admin/schools", label: "Schools (P2)", icon: GraduationCap },
       { href: "/admin/audit", label: "Audit log", icon: History },
     ],

@@ -10,7 +10,6 @@ import { PageHeader } from "@/components/admin/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -31,11 +30,11 @@ import { ExamTypeBadge } from "@/components/admin/shared/exam-type-badge";
 import { WinnerSelectionModal } from "@/components/admin/winners/winner-selection-modal";
 import { PeriodDetailModal } from "@/components/admin/winners/period-detail-modal";
 import type {
-  DashboardMetrics,
   ExamType,
   HallOfFameRow,
   LeaderboardPeriodType,
   Paginated,
+  PendingWinnerPeriod,
   Winner,
 } from "@/types/api";
 
@@ -55,11 +54,6 @@ export default function WinnersPage() {
     periodType: LeaderboardPeriodType;
     periodStart: string;
   } | null>(null);
-
-  const { data: metrics } = useQuery({
-    queryKey: QK.DASHBOARD_METRICS(),
-    queryFn: () => unwrap<DashboardMetrics>(api.get("/admin/dashboard")),
-  });
 
   const filters = {
     periodType: periodType === "all" ? undefined : periodType,
@@ -82,9 +76,18 @@ export default function WinnersPage() {
       ),
   });
 
-  const periodStart = metrics?.winnersPeriodEndedAt
-    ? metrics.winnersPeriodEndedAt.slice(0, 10)
-    : "";
+  // Every (exam, period_type, period_start) that has candidates
+  // but no confirmed winners — the authoritative "still needs
+  // selection" list. Previously this surface was driven by the
+  // dashboard metrics endpoint which only knew about last week;
+  // any week the admin forgot to confirm silently disappeared.
+  const { data: pendingPeriods } = useQuery({
+    queryKey: QK.WINNERS_PENDING_PERIODS(),
+    queryFn: () =>
+      unwrap<PendingWinnerPeriod[]>(
+        api.get("/admin/winners/pending-periods"),
+      ),
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -93,64 +96,70 @@ export default function WinnersPage() {
         description="Select weekly and monthly winners, issue XP prizes, view hall of fame."
       />
 
-      {(metrics?.winnersPendingWeeklyBece ||
-        metrics?.winnersPendingWeeklyWassce) && (
-        <Alert variant="warning">
-          <Gift className="h-4 w-4" />
-          <AlertTitle>Winners pending selection</AlertTitle>
-          <AlertDescription className="flex flex-col gap-2">
-            <span>
-              Period ended {formatDate(metrics?.winnersPeriodEndedAt ?? null)}.
-            </span>
-            <div className="flex gap-2">
-              {metrics?.winnersPendingWeeklyWassce && (
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    setModal({
-                      examType: "wassce",
-                      periodType: "weekly",
-                      periodStart,
-                    })
-                  }
-                >
-                  Select WASSCE winners
-                </Button>
-              )}
-              {metrics?.winnersPendingWeeklyBece && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setModal({
-                      examType: "bece",
-                      periodType: "weekly",
-                      periodStart,
-                    })
-                  }
-                >
-                  Select BECE winners
-                </Button>
-              )}
-              {metrics?.winnersPendingWeeklyNovdec && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setModal({
-                      examType: "novdec",
-                      periodType: "weekly",
-                      periodStart,
-                    })
-                  }
-                >
-                  Select NOVDEC winners
-                </Button>
-              )}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
+      {pendingPeriods && pendingPeriods.length > 0 ? (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Gift className="h-4 w-4 text-amber-700" />
+              Winners pending selection
+              <Badge variant="warning" className="ml-1">
+                {pendingPeriods.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-slate-600 mb-3">
+              Every leaderboard period below has closed but doesn&apos;t have
+              winners yet. Confirm them — the candidate pool stays
+              queryable and XP prizes can be issued retroactively.
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Exam</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Candidates</TableHead>
+                  <TableHead className="text-right" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingPeriods.map((p) => (
+                  <TableRow key={`${p.examType}:${p.periodType}:${p.periodStart}`}>
+                    <TableCell className="text-sm font-medium">
+                      {p.periodType === "weekly" ? "Week of" : "Month of"}{" "}
+                      {formatDate(p.periodStart)}
+                    </TableCell>
+                    <TableCell>
+                      <ExamTypeBadge value={p.examType} />
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500 capitalize">
+                      {p.periodType}
+                    </TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">
+                      {formatNumber(p.candidateCount)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setModal({
+                            examType: p.examType,
+                            periodType: p.periodType,
+                            periodStart: p.periodStart,
+                          })
+                        }
+                      >
+                        Select winners
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="p-4 flex flex-wrap items-end gap-3">
         <div>

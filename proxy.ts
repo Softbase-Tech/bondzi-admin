@@ -54,17 +54,21 @@ export default auth((req) => {
 export const config = {
   matcher: [
     // Run on all routes EXCEPT:
-    //   - api/auth        — NextAuth route handlers
-    //   - _next/static    — webpack chunks
-    //   - _next/image     — the Next image optimizer
-    //   - favicon.ico     — favicon shortcut
-    //   - login           — the login page itself (would loop)
-    //   - brand           — `/public/brand/*` (logos shown on /login,
-    //                       served directly via Image `unoptimized`).
-    //                       Without this, the proxy redirects the
-    //                       logo's GET to /login because the visitor
-    //                       has no session yet and the broken image
-    //                       silently kills branding on the auth pages.
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|login|brand).*)",
+    //   - api/auth              — NextAuth route handlers
+    //   - _next/static          — webpack chunks
+    //   - _next/image           — the Next image optimizer
+    //   - favicon.ico           — favicon shortcut
+    //   - login                 — the login page itself (would loop)
+    //   - forgot-password       — public page; user has no session yet
+    //   - reset-password        — public token-landing page from email
+    //   - verify-email          — public token-landing page from email
+    //   - brand                 — `/public/brand/*` (logos shown on
+    //                             all auth pages, served directly via
+    //                             Image `unoptimized`). Without this,
+    //                             the proxy redirects the logo GETs
+    //                             to /login because the visitor has
+    //                             no session yet and the broken image
+    //                             silently kills branding.
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|login|forgot-password|reset-password|verify-email|brand).*)",
   ],
 };

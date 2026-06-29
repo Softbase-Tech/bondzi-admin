@@ -81,6 +81,7 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Username</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Exam</TableHead>
               <TableHead>Role</TableHead>
@@ -95,7 +96,7 @@ export default function UsersPage() {
             {isLoading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   </TableRow>
@@ -114,6 +115,15 @@ export default function UsersPage() {
                           {u.fullName}
                         </span>
                       </Link>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {u.username ? (
+                        <span className="font-mono text-slate-700">
+                          @{u.username}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-slate-500 text-xs">
                       {u.email ?? u.phone ?? "—"}
