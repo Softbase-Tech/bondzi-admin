@@ -33,6 +33,9 @@ export const QK = {
   SYLLABUS_TOPICS: (filters: Record<string, unknown>) =>
     ["syllabus-topics", filters] as const,
 
+  // Entitlements (tier × service matrix)
+  ENTITLEMENTS_MATRIX: () => ["entitlements", "matrix"] as const,
+
   // AI
   AI_USAGE: (period: string) => ["ai", "usage", period] as const,
   AI_EXPLANATIONS_PENDING: () => ["ai", "explanations", "pending"] as const,

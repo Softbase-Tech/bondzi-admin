@@ -19,6 +19,7 @@ import {
   Sparkles,
   ServerCog,
   Share2,
+  SlidersHorizontal,
   Tags,
   Trophy,
   Upload,
@@ -148,6 +149,11 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Platform Config",
     items: [
       { href: "/admin/plans", label: "Plans", icon: Tags },
+      {
+        href: "/admin/entitlements",
+        label: "Entitlements",
+        icon: SlidersHorizontal,
+      },
       { href: "/admin/config/ads", label: "Ads (P2)", icon: BarChart3 },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
       {

@@ -948,3 +948,35 @@ export interface AdConfig {
   triggerEvent: string;
   updatedAt: string;
 }
+
+/**
+ * Every gated feature has a stable key here — must stay in lock-step
+ * with `EntitlementService` in
+ * `backend/src/common/types/enums.ts`. Adding a new service means
+ * adding it in both places AND seeding a row per tier in the backend
+ * migration.
+ */
+export type EntitlementServiceKey =
+  | 'past_papers_core'
+  | 'past_papers_elective'
+  | 'level_tests'
+  | 'mock_exams'
+  | 'ai_explanations'
+  | 'post_exam_ai_breakdown'
+  | 'ai_weakness_narratives';
+
+/**
+ * One cell in the tier × service matrix. Matches
+ * `TierService` on the backend.
+ */
+export interface EntitlementPolicy {
+  id: string;
+  accountType: AccountType;
+  service: EntitlementServiceKey;
+  enabled: boolean;
+  /** NULL means unlimited. */
+  dailyCap: number | null;
+  config: Record<string, unknown>;
+  updatedAt: string;
+  updatedBy: string | null;
+}
