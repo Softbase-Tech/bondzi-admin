@@ -7,7 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { Pencil, Plus, ListTree, Archive } from "lucide-react";
+import { Pencil, Plus, ListTree, Archive, BookOpenText } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { PageHeader } from "@/components/admin/layout/page-header";
@@ -29,6 +29,7 @@ import { cn, formatNumber } from "@/lib/utils";
 import type { ExamType, Subject } from "@/types/api";
 import { SubjectFormModal } from "@/components/admin/subjects/subject-form-modal";
 import { TopicsDrawer } from "@/components/admin/subjects/topics-drawer";
+import { SyllabusDrawer } from "@/components/admin/subjects/syllabus-drawer";
 
 /**
  * /admin/subjects — full CRUD for subjects + nested topic management.
@@ -54,6 +55,7 @@ export default function SubjectsPage() {
   const [editing, setEditing] = useState<Subject | null>(null);
   const [creating, setCreating] = useState(false);
   const [topicsFor, setTopicsFor] = useState<Subject | null>(null);
+  const [syllabusFor, setSyllabusFor] = useState<Subject | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: QK.SUBJECTS_LIST({ admin: true }),
@@ -235,10 +237,20 @@ export default function SubjectsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setTopicsFor(s)}
-                          title="Manage topics"
+                          title="Manage past-paper topics"
                         >
                           <ListTree className="h-3.5 w-3.5" /> Topics
                         </Button>
+                        {s.examType !== "novdec" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSyllabusFor(s)}
+                            title="Manage syllabus topics (per form level)"
+                          >
+                            <BookOpenText className="h-3.5 w-3.5" /> Syllabus
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -288,6 +300,14 @@ export default function SubjectsPage() {
         open={topicsFor !== null}
         onOpenChange={(open) => {
           if (!open) setTopicsFor(null);
+        }}
+      />
+
+      <SyllabusDrawer
+        subject={syllabusFor}
+        open={syllabusFor !== null}
+        onOpenChange={(open) => {
+          if (!open) setSyllabusFor(null);
         }}
       />
     </div>
