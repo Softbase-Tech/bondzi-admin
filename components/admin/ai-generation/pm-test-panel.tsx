@@ -39,7 +39,7 @@ import type {
   SyllabusTopic,
 } from "@/types/api";
 
-type Model = "haiku" | "sonnet";
+type Model = "claude-haiku" | "claude-sonnet";
 type Mode = "append" | "replace";
 
 interface RowState {
@@ -65,7 +65,7 @@ const FORM_LEVELS: Record<ExamType, number[]> = {
 export function PmTestPanel() {
   const [examType, setExamType] = useState<ExamType>("wassce");
   const [rows, setRows] = useState<Record<string, RowState>>({});
-  const [model, setModel] = useState<Model>("haiku");
+  const [model, setModel] = useState<Model>("claude-haiku");
   const [includeExplanations, setIncludeExplanations] = useState(true);
   const [preview, setPreview] = useState<PmTestPreviewResponse | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -107,30 +107,45 @@ export function PmTestPanel() {
     setPreview(null);
   };
 
+  // Backend contract (PmTestPreviewDto):
+  //   { examType, selections: [{formLevel, subjectId, syllabusTopicIds?,
+  //                              questionCount, difficulty:{easy,medium,hard},
+  //                              mode}],
+  //     model: 'claude-haiku'|'claude-sonnet', includeExplanations, batchSize }
+  // Note: examType is TOP-LEVEL only — not repeated per selection.
+  // `selections` (not `rows`), `difficulty` (not `difficultyMix`), and
+  // `batchSize` is required. 20 is the AI processor's default batch size
+  // in ai-generation.processor.ts.
+  const PREVIEW_BATCH_SIZE = 20;
+
+  const buildPreviewBody = () => {
+    const enabled = matrix
+      .map((m) => ({ key: key(m.formLevel, m.subject.id), m }))
+      .filter(({ key: k }) => rows[k]?.enabled);
+    return {
+      examType,
+      model,
+      includeExplanations,
+      batchSize: PREVIEW_BATCH_SIZE,
+      selections: enabled.map(({ key: k, m }) => ({
+        formLevel: m.formLevel,
+        subjectId: m.subject.id,
+        questionCount: rows[k]?.count ?? 100,
+        difficulty: rows[k]?.mix ?? DEFAULT_MIX,
+        mode: rows[k]?.mode ?? "append",
+        syllabusTopicIds: rows[k]?.syllabusTopicIds?.length
+          ? rows[k]?.syllabusTopicIds
+          : undefined,
+      })),
+    };
+  };
+
   const previewMut = useMutation({
     mutationFn: () => {
-      const enabled = matrix
-        .map((m) => ({ key: key(m.formLevel, m.subject.id), m }))
-        .filter(({ key: k }) => rows[k]?.enabled);
-      if (enabled.length === 0) {
+      const body = buildPreviewBody();
+      if (body.selections.length === 0) {
         throw { message: "Select at least one (level, subject)." };
       }
-      const body = {
-        examType,
-        model,
-        includeExplanations,
-        rows: enabled.map(({ key: k, m }) => ({
-          examType,
-          formLevel: m.formLevel,
-          subjectId: m.subject.id,
-          questionCount: rows[k]?.count ?? 100,
-          difficultyMix: rows[k]?.mix ?? DEFAULT_MIX,
-          mode: rows[k]?.mode ?? "append",
-          syllabusTopicIds: rows[k]?.syllabusTopicIds?.length
-            ? rows[k]?.syllabusTopicIds
-            : undefined,
-        })),
-      };
       return unwrap<PmTestPreviewResponse>(
         api.post("/admin/ai-generation/pm-test/preview", body),
       );
@@ -138,7 +153,7 @@ export function PmTestPanel() {
     onSuccess: (data) => {
       setPreview(data);
       toast.success(
-        `${formatNumber(data.totalQuestions)} questions — preview ready`,
+        `${formatNumber(data.estimate.totalItems)} questions — preview ready`,
       );
     },
     onError: (e: { message?: string }) =>
@@ -147,8 +162,13 @@ export function PmTestPanel() {
 
   const generateMut = useMutation({
     mutationFn: () =>
+      // PmTestGenerateDto EXTENDS PmTestPreviewDto — the token alone is
+      // rejected. Send the full DTO plus confirmationToken.
       unwrap<{ jobId: string }>(
-        api.post("/admin/ai-generation/pm-test", { token: preview!.token }),
+        api.post("/admin/ai-generation/pm-test", {
+          ...buildPreviewBody(),
+          confirmationToken: preview!.confirmationToken,
+        }),
       ),
     onSuccess: (data) => {
       setJobId(data.jobId);
@@ -332,8 +352,8 @@ export function PmTestPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="haiku">Claude Haiku</SelectItem>
-                <SelectItem value="sonnet">Claude Sonnet</SelectItem>
+                <SelectItem value="claude-haiku">Claude Haiku</SelectItem>
+                <SelectItem value="claude-sonnet">Claude Sonnet</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -361,7 +381,7 @@ export function PmTestPanel() {
           <Button disabled={!preview} onClick={() => setConfirming(true)}>
             <Sparkles className="h-4 w-4" />
             {preview
-              ? `Generate ${formatNumber(preview.totalQuestions)} questions`
+              ? `Generate ${formatNumber(preview.estimate.totalItems)} questions`
               : "Generate"}
           </Button>
         </div>
@@ -371,26 +391,40 @@ export function PmTestPanel() {
             <div className="font-medium text-primary-deep">Preview</div>
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge variant="outline">
-                {formatNumber(preview.totalQuestions)} questions
+                {formatNumber(preview.estimate.totalItems)} questions
               </Badge>
               <Badge variant="outline">
-                Cost ~ {formatUSD(preview.estimatedCostUsd)}
+                Cost ~ {formatUSD(preview.estimate.estimatedCostUsd)}
               </Badge>
-              <Badge variant="outline">ETA ~{preview.estimatedMinutes}m</Badge>
-              <Badge variant="outline">Model: {preview.model}</Badge>
+              <Badge variant="outline">
+                ETA ~{Math.max(1, Math.round(preview.estimate.estimatedSeconds / 60))}m
+              </Badge>
+              <Badge variant="outline">Model: {preview.estimate.model}</Badge>
             </div>
+            {preview.warnings.length > 0 && (
+              <ul className="text-xs text-amber-700 list-disc pl-4">
+                {preview.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            )}
             <details className="text-xs">
               <summary className="cursor-pointer text-primary-deep">
                 Breakdown
               </summary>
               <ul className="mt-1 space-y-0.5 text-slate-700">
-                {preview.breakdown.map((b) => (
-                  <li key={`${b.examType}-${b.formLevel}-${b.subjectId}`}>
-                    F{b.formLevel} · {b.subjectName} ·{" "}
-                    {formatNumber(b.questionCount)} q ·{" "}
-                    {formatUSD(b.estimatedCostUsd)}
-                  </li>
-                ))}
+                {preview.perSelection.map((b) => {
+                  const subjectName =
+                    subjects?.find((s) => s.id === b.subjectId)?.name ??
+                    b.subjectId.slice(0, 8);
+                  return (
+                    <li key={`${b.formLevel}-${b.subjectId}`}>
+                      F{b.formLevel} · {subjectName} ·{" "}
+                      {formatNumber(b.questionCount)} q ·{" "}
+                      {formatUSD(b.estimatedCostUsd)}
+                    </li>
+                  );
+                })}
               </ul>
             </details>
           </div>
@@ -403,7 +437,7 @@ export function PmTestPanel() {
         open={confirming}
         onOpenChange={setConfirming}
         title="Start PM Test generation?"
-        description={`This will generate ${formatNumber(preview?.totalQuestions ?? 0)} questions (cost ~ ${formatUSD(preview?.estimatedCostUsd ?? 0)}). They'll land in pending_review for admin approval.`}
+        description={`This will generate ${formatNumber(preview?.estimate.totalItems ?? 0)} questions (cost ~ ${formatUSD(preview?.estimate.estimatedCostUsd ?? 0)}). They'll land in pending_review for admin approval.`}
         onConfirm={() => generateMut.mutate()}
         busy={generateMut.isPending}
       />

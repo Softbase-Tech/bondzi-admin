@@ -782,12 +782,25 @@ export interface AiGenerationJob {
   createdAt: string;
 }
 
+/**
+ * Response shape returned by POST /admin/ai-generation/explanations/preview.
+ * Matches backend AdminExplanationsService.preview return value.
+ */
 export interface ExplanationPreviewResponse {
-  token: string;
-  totalQuestions: number;
-  estimatedCostUsd: number;
-  estimatedMinutes: number;
-  model: string;
+  confirmationToken: string;
+  expiresAt: string;
+  matchingQuestions: number;
+  estimate: {
+    totalItems: number;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    /** Seconds. Divide by 60 for the "~N minutes" pill. */
+    estimatedSeconds: number;
+  };
+  /** First 3 questions matched — for the operator to sanity-check the filter. */
+  sample: Array<{ id: string; body: string }>;
 }
 
 export interface PmTestGenerationRow {
@@ -801,21 +814,29 @@ export interface PmTestGenerationRow {
   syllabusTopicIds?: string[];
 }
 
+/**
+ * Response shape returned by POST /admin/ai-generation/pm-test/preview.
+ * Matches backend AdminPmTestService.preview return value.
+ */
 export interface PmTestPreviewResponse {
-  token: string;
-  totalQuestions: number;
-  estimatedCostUsd: number;
-  estimatedMinutes: number;
-  model: string;
-  includeExplanations: boolean;
-  breakdown: Array<{
-    examType: ExamType;
-    formLevel: number;
+  confirmationToken: string;
+  expiresAt: string;
+  estimate: {
+    totalItems: number;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    estimatedSeconds: number;
+  };
+  perSelection: Array<{
     subjectId: string;
-    subjectName: string;
+    formLevel: number;
     questionCount: number;
     estimatedCostUsd: number;
   }>;
+  /** Human-readable soft warnings (e.g. mode=replace notice, large-job ETA). */
+  warnings: string[];
 }
 
 export interface JobProgressEvent {

@@ -29,7 +29,7 @@ import type {
 } from "@/types/api";
 
 type HasExpl = "missing" | "has" | "all";
-type Model = "haiku" | "sonnet";
+type Model = "claude-haiku" | "claude-sonnet";
 
 export function ExplanationPanel() {
   const [examType, setExamType] = useState<ExamType>("wassce");
@@ -37,7 +37,7 @@ export function ExplanationPanel() {
   const [yearFrom, setYearFrom] = useState<number>(2005);
   const [yearTo, setYearTo] = useState<number>(2024);
   const [hasExpl, setHasExpl] = useState<HasExpl>("missing");
-  const [model, setModel] = useState<Model>("haiku");
+  const [model, setModel] = useState<Model>("claude-haiku");
 
   const [preview, setPreview] = useState<ExplanationPreviewResponse | null>(
     null,
@@ -53,22 +53,36 @@ export function ExplanationPanel() {
       ),
   });
 
+  // Backend contract (ExplanationPreviewDto):
+  //   { filters: { examType?, subjectIds?, yearRange?: {from,to}, hasExplanation?, questionIds? },
+  //     model: 'claude-haiku' | 'claude-sonnet' }
+  // Flat top-level fields (examType/yearFrom/yearTo/...) are rejected by
+  // the backend's `whitelist: true` validator with "property X should not
+  // exist" — hence this wrapper.
+  const buildPreviewBody = () => ({
+    filters: {
+      examType,
+      subjectIds: subjectIds.length ? subjectIds : undefined,
+      yearRange: { from: yearFrom, to: yearTo },
+      hasExplanation:
+        hasExpl === "all" ? undefined : hasExpl === "has" ? true : false,
+    },
+    model,
+  });
+
   const previewMut = useMutation({
     mutationFn: () =>
       unwrap<ExplanationPreviewResponse>(
-        api.post("/admin/ai-generation/explanations/preview", {
-          examType,
-          subjectIds: subjectIds.length ? subjectIds : undefined,
-          yearFrom,
-          yearTo,
-          hasExplanation:
-            hasExpl === "all" ? undefined : hasExpl === "has" ? true : false,
-          model,
-        }),
+        api.post(
+          "/admin/ai-generation/explanations/preview",
+          buildPreviewBody(),
+        ),
       ),
     onSuccess: (data) => {
       setPreview(data);
-      toast.success(`${formatNumber(data.totalQuestions)} questions selected`);
+      toast.success(
+        `${formatNumber(data.matchingQuestions)} questions selected`,
+      );
     },
     onError: (e: { message?: string }) =>
       toast.error(e.message ?? "Preview failed"),
@@ -76,9 +90,13 @@ export function ExplanationPanel() {
 
   const generateMut = useMutation({
     mutationFn: () =>
+      // ExplanationGenerateDto EXTENDS ExplanationPreviewDto — the token
+      // alone is not enough; the backend re-validates the whole DTO shape
+      // and looks up the token in Redis. Send both.
       unwrap<{ jobId: string }>(
         api.post("/admin/ai-generation/explanations", {
-          token: preview!.token,
+          ...buildPreviewBody(),
+          confirmationToken: preview!.confirmationToken,
         }),
       ),
     onSuccess: (data) => {
@@ -194,8 +212,10 @@ export function ExplanationPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="haiku">Claude Haiku (fast, cheap)</SelectItem>
-                <SelectItem value="sonnet">
+                <SelectItem value="claude-haiku">
+                  Claude Haiku (fast, cheap)
+                </SelectItem>
+                <SelectItem value="claude-sonnet">
                   Claude Sonnet (higher quality)
                 </SelectItem>
               </SelectContent>
@@ -217,7 +237,7 @@ export function ExplanationPanel() {
           >
             <Sparkles className="h-4 w-4" />
             {preview
-              ? `Generate for ${formatNumber(preview.totalQuestions)} questions`
+              ? `Generate for ${formatNumber(preview.matchingQuestions)} questions`
               : "Generate"}
           </Button>
         </div>
@@ -227,15 +247,15 @@ export function ExplanationPanel() {
             <div className="font-medium text-primary-deep">Preview</div>
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge variant="outline">
-                {formatNumber(preview.totalQuestions)} questions
+                {formatNumber(preview.matchingQuestions)} questions
               </Badge>
               <Badge variant="outline">
-                Cost ~ {formatUSD(preview.estimatedCostUsd)}
+                Cost ~ {formatUSD(preview.estimate.estimatedCostUsd)}
               </Badge>
               <Badge variant="outline">
-                ETA ~{preview.estimatedMinutes}m
+                ETA ~{Math.max(1, Math.round(preview.estimate.estimatedSeconds / 60))}m
               </Badge>
-              <Badge variant="outline">Model: {preview.model}</Badge>
+              <Badge variant="outline">Model: {preview.estimate.model}</Badge>
             </div>
           </div>
         )}
@@ -247,7 +267,7 @@ export function ExplanationPanel() {
         open={confirming}
         onOpenChange={setConfirming}
         title="Start explanation generation?"
-        description={`This will generate explanations for ${formatNumber(preview?.totalQuestions ?? 0)} questions. Estimated cost ${formatUSD(preview?.estimatedCostUsd ?? 0)}. Type GENERATE to proceed.`}
+        description={`This will generate explanations for ${formatNumber(preview?.matchingQuestions ?? 0)} questions. Estimated cost ${formatUSD(preview?.estimate.estimatedCostUsd ?? 0)}. Type GENERATE to proceed.`}
         onConfirm={() => generateMut.mutate()}
         busy={generateMut.isPending}
       />
