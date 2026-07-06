@@ -16,6 +16,7 @@ import {
   ListChecks,
   MessageSquare,
   Monitor,
+  ShieldAlert,
   Sparkles,
   ServerCog,
   Share2,
@@ -137,6 +138,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/ai-generation", label: "AI Generation", icon: Sparkles },
       { href: "/admin/ai/monitor", label: "AI monitor", icon: Monitor },
+      { href: "/admin/ai/rejects", label: "AI rejects", icon: ShieldAlert },
       {
         href: "/admin/jobs",
         label: "Job queues",

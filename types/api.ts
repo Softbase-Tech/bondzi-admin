@@ -407,6 +407,39 @@ export interface AiUsageBreakdown {
   topUsers: Array<{ userId: string; calls: string; costUsd: string }>;
 }
 
+/**
+ * One row of the raw AI reject log. Rows older than 30 days are pruned
+ * by the weekly retention job; the weekly aggregate below persists
+ * indefinitely for trend charts.
+ */
+export interface AiRejectLogRow {
+  id: string;
+  jobId: string | null;
+  action: "question_generation" | "explanation";
+  provider: "bedrock" | "ollama";
+  model: string;
+  reason: string;
+  detail: string | null;
+  rawOutput: string | null;
+  createdAt: string;
+}
+
+export interface AiRejectLogPage {
+  items: AiRejectLogRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AiRejectAggRow {
+  weekStart: string;
+  reason: string;
+  provider: "bedrock" | "ollama";
+  model: string;
+  count: number;
+  updatedAt: string;
+}
+
 export interface DashboardMetrics {
   totalUsers: number;
   activeSubscriptions: number;

@@ -49,6 +49,9 @@ export const QK = {
     ["ai", "explanations", "pending-approval"] as const,
   AI_EXPLANATIONS_CALIBRATION: (days: number) =>
     ["ai", "explanations", "calibration", days] as const,
+  AI_REJECTS: (filters: Record<string, unknown>) =>
+    ["ai", "rejects", filters] as const,
+  AI_REJECTS_AGG: () => ["ai", "rejects", "agg"] as const,
 
   // PM Test
   PM_TEST_REVIEW_LIST: (filters: Record<string, unknown>) =>
