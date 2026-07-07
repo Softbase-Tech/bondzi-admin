@@ -4,7 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { ArrowLeft, Check, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -44,6 +44,22 @@ export default function QuestionDetailPage({
       window.location.href = "/admin/questions";
     },
     onError: (err: { message: string }) => toast.error(err.message),
+  });
+
+  // Kick off (or re-generate) the AI explanation for THIS question.
+  // Backend queues a one-off explanation-bulk job; the result overwrites
+  // question.explanation and lands in the same row.
+  const regenerate = useMutation({
+    mutationFn: (model: "claude-haiku" | "claude-sonnet") =>
+      api.post(`/admin/ai-generation/explanations/${id}`, { model }),
+    onSuccess: () => {
+      toast.success(
+        "Explanation regeneration queued — refresh this page in ~30s to see the new text.",
+      );
+      qc.invalidateQueries({ queryKey: QK.QUESTION_DETAIL(id) });
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err.message ?? "Could not queue regeneration"),
   });
 
   if (isLoading) {
@@ -268,6 +284,80 @@ export default function QuestionDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CardTitle>AI Explanation</CardTitle>
+            {data.explanation ? (
+              <Badge variant="success">Present</Badge>
+            ) : (
+              <Badge variant="outline" className="text-slate-500">
+                Missing
+              </Badge>
+            )}
+          </div>
+          {canEditQuestions && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                loading={regenerate.isPending}
+                onClick={() => regenerate.mutate("claude-haiku")}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {data.explanation ? "Regenerate (Haiku)" : "Generate (Haiku)"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={regenerate.isPending}
+                onClick={() => regenerate.mutate("claude-sonnet")}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {data.explanation ? "Regenerate (Sonnet)" : "Generate (Sonnet)"}
+              </Button>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          {data.explanation ? (
+            <>
+              <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                {data.explanationModel && (
+                  <span>
+                    Model:{" "}
+                    <span className="font-mono text-slate-700">
+                      {data.explanationModel}
+                    </span>
+                  </span>
+                )}
+                {data.explanationGeneratedAt && (
+                  <span>
+                    Generated:{" "}
+                    <span className="text-slate-700">
+                      {formatDate(data.explanationGeneratedAt)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                <MathPreview source={data.explanation} />
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                To edit the text manually, use the Edit button at the top of
+                the page and update the Explanation field.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">
+              No explanation has been generated for this question yet. Click
+              &quot;Generate&quot; above to queue an AI job — the result will
+              land inline on this row in ~30 seconds.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

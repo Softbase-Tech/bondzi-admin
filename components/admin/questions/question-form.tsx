@@ -6,7 +6,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
@@ -73,6 +73,7 @@ export function QuestionForm({ mode, initial }: Props) {
             isCorrect: !!o.isCorrect,
             sortOrder: o.sortOrder,
           })),
+          explanation: initial.explanation ?? "",
         }
       : {
           subjectId: "",
@@ -127,6 +128,17 @@ export function QuestionForm({ mode, initial }: Props) {
           difficulty: data.difficulty,
           tags: data.tags,
           options: data.options,
+          // Send explanation ONLY when it changed vs the row that
+          // loaded — the backend PATCH stamps
+          // explanation_model='manual' + explanation_generated_at=now()
+          // on any non-undefined value, and we don't want an untouched
+          // form to overwrite the AI-generated model tag.
+          explanation:
+            (data.explanation ?? "") !== (initial.explanation ?? "")
+              ? data.explanation === ""
+                ? null
+                : data.explanation
+              : undefined,
         };
         return api.patch(`/questions/${initial.id}`, patch);
       }
@@ -138,6 +150,25 @@ export function QuestionForm({ mode, initial }: Props) {
       router.push("/admin/questions");
     },
     onError: (err: { message: string }) => toast.error(err.message),
+  });
+
+  // AI regeneration is a SEPARATE action from the form save — a
+  // background job that overwrites question.explanation directly.
+  // Only exposed in edit mode (an unsaved new question has no id).
+  const regenerate = useMutation({
+    mutationFn: (model: "claude-haiku" | "claude-sonnet") => {
+      if (!initial) throw new Error("Save the question first");
+      return api.post(`/admin/ai-generation/explanations/${initial.id}`, {
+        model,
+      });
+    },
+    onSuccess: () => {
+      toast.success(
+        "AI regeneration queued — the new text will overwrite this field in ~30s. Refresh to see it.",
+      );
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err.message ?? "Could not queue regeneration"),
   });
 
   return (
@@ -467,6 +498,90 @@ export function QuestionForm({ mode, initial }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Explanation lives BELOW both columns as a full-width card.
+          Only shown in edit mode — a create form has no question id
+          yet so the AI regenerate endpoint (which needs the id) can't
+          fire. New questions get their explanation via the bulk
+          generation flow on /admin/explanations after they're saved. */}
+      {mode === "edit" && initial ? (
+        <Card className="lg:col-span-5">
+          <CardHeader className="flex flex-row items-start justify-between gap-2">
+            <div>
+              <CardTitle>AI Explanation</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">
+                Markdown, `$...$` LaTeX allowed. Saving with an edited
+                value stamps `model=manual`; the AI Regenerate buttons
+                queue a background job that overwrites this field.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                loading={regenerate.isPending}
+                onClick={() => regenerate.mutate("claude-haiku")}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Regenerate (Haiku)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                loading={regenerate.isPending}
+                onClick={() => regenerate.mutate("claude-sonnet")}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Regenerate (Sonnet)
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {initial.explanationModel || initial.explanationGeneratedAt ? (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                {initial.explanationModel && (
+                  <span>
+                    Model:{" "}
+                    <span className="font-mono text-slate-700">
+                      {initial.explanationModel}
+                    </span>
+                  </span>
+                )}
+                {initial.explanationGeneratedAt && (
+                  <span>
+                    Generated:{" "}
+                    <span className="text-slate-700">
+                      {new Date(
+                        initial.explanationGeneratedAt,
+                      ).toLocaleString()}
+                    </span>
+                  </span>
+                )}
+              </div>
+            ) : null}
+            <textarea
+              id="explanation"
+              rows={12}
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="No explanation yet — click Regenerate above to queue one, or paste/write your own here and Save."
+              value={form.watch("explanation") ?? ""}
+              onChange={(e) =>
+                form.setValue("explanation", e.target.value, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+            />
+            {form.formState.errors.explanation && (
+              <p className="text-xs text-rose-600">
+                {form.formState.errors.explanation.message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </form>
   );
 }

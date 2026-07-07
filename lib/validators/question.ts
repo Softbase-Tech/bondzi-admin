@@ -35,6 +35,13 @@ export const createQuestionSchema = z
     difficulty: z.enum(["easy", "medium", "hard"]),
     tags: z.array(z.string()).optional(),
     options: z.array(optionSchema).min(2, "At least 2 options required"),
+    /**
+     * Manual explanation text (Markdown, `$...$` LaTeX allowed). Sent
+     * in the PATCH payload on edit; backend stamps
+     * explanation_model='manual' + explanation_generated_at=now() when
+     * this changes. Empty string clears the explanation back to NULL.
+     */
+    explanation: z.string().max(20_000).optional().or(z.literal("")),
   })
   .refine((q) => q.options.filter((o) => o.isCorrect).length === 1, {
     message: "Exactly one option must be marked correct",
