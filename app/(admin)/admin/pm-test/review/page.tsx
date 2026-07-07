@@ -174,7 +174,7 @@ export default function PmTestReviewPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="PM Test review queue"
+        title="Level Test review queue"
         description="AI-generated questions awaiting admin approval before they go live."
         actions={
           <Button variant="outline" onClick={() => spotCheckMut.mutate()}>

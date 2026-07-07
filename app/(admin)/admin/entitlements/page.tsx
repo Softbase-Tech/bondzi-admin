@@ -64,7 +64,7 @@ const SERVICE_META: Record<
   mock_exams: {
     label: "Mock Exams",
     description:
-      "Timed full-paper simulations. Uses pre-generated PM-Test pool + mock_exam_templates.",
+      "Timed 50-question simulations from the past-paper pool. Distinct from Level Tests and Past Papers — 3-hour timer, no filters, single-subject.",
   },
   ai_explanations: {
     label: "AI Explanations",

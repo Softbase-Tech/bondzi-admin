@@ -336,7 +336,7 @@ export default function QuestionsPage() {
                 <SelectItem value="wassce_past">WASSCE past</SelectItem>
                 <SelectItem value="bece_past">BECE past</SelectItem>
                 <SelectItem value="ai_passmaster_test">
-                  PM Test (AI)
+                  Level Test (AI)
                 </SelectItem>
               </SelectContent>
             </Select>

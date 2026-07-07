@@ -82,7 +82,7 @@ export function GenerationHistory() {
                       <TableCell className="text-sm">
                         {j.jobType === "explanation_bulk"
                           ? "Explanations"
-                          : "PM Test"}
+                          : "Level Test"}
                       </TableCell>
                       <TableCell>
                         <span

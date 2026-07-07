@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatDateTime, formatNumber, formatUSD } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { AI_JOB_STATUS_LABEL, AI_JOB_STATUS_TONE } from "@/lib/constants";
+import { AI_JOB_STATUS_TONE } from "@/lib/constants";
 import type { AiGenerationJob } from "@/types/api";
 
 /**
@@ -175,7 +175,7 @@ export function PendingApprovalPanel() {
                     <TableCell className="text-sm">
                       {j.jobType === "explanation_bulk"
                         ? "Explanations"
-                        : "PM Test"}
+                        : "Level Test"}
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {formatNumber(j.totalItems ?? 0)}

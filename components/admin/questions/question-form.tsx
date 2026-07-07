@@ -405,7 +405,7 @@ export function QuestionForm({ mode, initial }: Props) {
                   <SelectItem value="wassce_past">WASSCE past</SelectItem>
                   <SelectItem value="bece_past">BECE past</SelectItem>
                   <SelectItem value="ai_passmaster_test">
-                    AI — Bondzi Test
+                    AI — Level Test
                   </SelectItem>
                 </SelectContent>
               </Select>

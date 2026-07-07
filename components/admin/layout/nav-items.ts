@@ -84,13 +84,13 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: "/admin/pm-test/review",
-        label: "PM Test review",
+        label: "Level Test review",
         icon: ListChecks,
         badgeKey: "pmTestReview",
       },
       {
         href: "/admin/pm-test/generate",
-        label: "PM Test generate",
+        label: "Level Test generate",
         icon: Wand2,
       },
       {

@@ -53,7 +53,7 @@ interface RowState {
 
 const DEFAULT_MIX = { easy: 30, medium: 50, hard: 20 };
 
-// NOVDEC reuses the WASSCE PM Test pool — students study the same
+// NOVDEC reuses the WASSCE Level Test pool — students study the same
 // syllabus. Form levels mirror WASSCE so admins can target the same
 // SHS 1/2/3 cohorts.
 const FORM_LEVELS: Record<ExamType, number[]> = {
@@ -173,7 +173,7 @@ export function PmTestPanel() {
     onSuccess: (data) => {
       setJobId(data.jobId);
       setConfirming(false);
-      toast.success("PM Test generation queued");
+      toast.success("Level Test generation queued");
     },
     onError: (e: { message?: string }) =>
       toast.error(e.message ?? "Failed to start job"),
@@ -183,7 +183,7 @@ export function PmTestPanel() {
     <Card className="flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wand2 className="h-4 w-4" /> Bondzi Test generation
+          <Wand2 className="h-4 w-4" /> Level Test generation
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -436,7 +436,7 @@ export function PmTestPanel() {
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
-        title="Start PM Test generation?"
+        title="Start Level Test generation?"
         description={`This will generate ${formatNumber(preview?.estimate.totalItems ?? 0)} questions (cost ~ ${formatUSD(preview?.estimate.estimatedCostUsd ?? 0)}). They'll land in pending_review for admin approval.`}
         onConfirm={() => generateMut.mutate()}
         busy={generateMut.isPending}

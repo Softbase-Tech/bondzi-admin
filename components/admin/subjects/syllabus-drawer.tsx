@@ -31,8 +31,8 @@ interface Props {
  * Syllabus-topics editor. Distinct from `TopicsDrawer` (which manages
  * the past-paper `topics` table). This one edits `syllabus_topics` —
  * the curriculum-aligned list per subject × exam type × form level
- * that drives PM-Test AI generation and the mobile Level-Test setup
- * screen (once Phase 1.3 lands).
+ * that drives Level Test AI generation and the mobile Level Test
+ * setup screen.
  *
  * Structure:
  *   Form-level tabs (F1/F2/F3). NOVDEC subjects have no form-level
@@ -194,10 +194,10 @@ export function SyllabusDrawer({ subject, open, onOpenChange }: Props) {
               : "Syllabus topics"}
           </SheetTitle>
           <SheetDescription>
-            Curriculum-aligned topics per form level. Drives PM-Test AI
-            generation grounding and (once Phase 1.3 lands) the mobile
-            Level-Test picker. Bulk-import is idempotent — re-pasting the
-            same spreadsheet refreshes existing rows instead of duplicating.
+            Curriculum-aligned topics per form level. Drives Level Test
+            AI generation grounding and the mobile Level Test picker.
+            Bulk-import is idempotent — re-pasting the same spreadsheet
+            refreshes existing rows instead of duplicating.
           </SheetDescription>
         </SheetHeader>
 

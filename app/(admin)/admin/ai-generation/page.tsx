@@ -10,7 +10,7 @@ export default function AiGenerationPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="AI Generation"
-        description="Bulk explanation generation and Bondzi Test question generation. Admin-triggered, cost-gated, live-streamed progress."
+        description="AI Explanations bulk generation and Level Test question generation. Admin-triggered, cost-gated, live-streamed progress."
       />
       {/* Co-sign queue first — anything sitting here is blocking real
           work until a second admin acts. */}
