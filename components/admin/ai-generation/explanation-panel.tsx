@@ -31,11 +31,20 @@ import type {
 type HasExpl = "missing" | "has" | "all";
 type Model = "claude-haiku" | "claude-sonnet";
 
+// Year-range bounds for the slider. MAX tracks the current year so freshly
+// imported papers (e.g. 2025 BECE) are never excluded by a stale ceiling.
+// Different exam types cover very different spans (BECE Maths is 2006–2011,
+// WASSCE runs to the present), so the range resets to the full span on every
+// exam-type switch — otherwise a range narrowed for one exam type silently
+// matches zero questions in another.
+const YEAR_MIN = 2005;
+const YEAR_MAX = new Date().getFullYear();
+
 export function ExplanationPanel() {
   const [examType, setExamType] = useState<ExamType>("wassce");
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
-  const [yearFrom, setYearFrom] = useState<number>(2005);
-  const [yearTo, setYearTo] = useState<number>(2024);
+  const [yearFrom, setYearFrom] = useState<number>(YEAR_MIN);
+  const [yearTo, setYearTo] = useState<number>(YEAR_MAX);
   const [hasExpl, setHasExpl] = useState<HasExpl>("missing");
   const [model, setModel] = useState<Model>("claude-haiku");
 
@@ -130,6 +139,11 @@ export function ExplanationPanel() {
             onChange={(v) => {
               setExamType(v);
               setSubjectIds([]);
+              // Reset to the full span — a range narrowed for the previous
+              // exam type (e.g. 2023–2024 on WASSCE) would exclude every
+              // question of the new one (BECE Maths is 2006–2011).
+              setYearFrom(YEAR_MIN);
+              setYearTo(YEAR_MAX);
               setPreview(null);
             }}
           />
@@ -167,8 +181,8 @@ export function ExplanationPanel() {
         <div className="space-y-1">
           <Label>Year range</Label>
           <YearRangeSlider
-            min={2005}
-            max={2024}
+            min={YEAR_MIN}
+            max={YEAR_MAX}
             from={yearFrom}
             to={yearTo}
             onChange={(f, t) => {
