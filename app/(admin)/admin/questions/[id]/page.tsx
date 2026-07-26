@@ -190,7 +190,7 @@ export default function QuestionDetailPage({
                       className={cn(
                         "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                         o.isCorrect
-                          ? "bg-emerald-600 text-white"
+                          ? "bg-emerald-600 text-primary-foreground dark:bg-[#059669]"
                           : "bg-slate-200 text-slate-700",
                       )}
                     >

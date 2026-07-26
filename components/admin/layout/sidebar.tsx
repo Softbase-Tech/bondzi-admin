@@ -75,6 +75,8 @@ export function Sidebar() {
             href="/admin"
             className="flex items-center gap-2 text-slate-900 font-semibold"
           >
+            {/* Black mark in light mode, white in dark — CSS-toggled so it
+                flips with the theme class without a JS round-trip. */}
             <Image
               src="/brand/icon-black.png"
               alt="Bondzi"
@@ -82,20 +84,40 @@ export function Sidebar() {
               height={28}
               priority
               unoptimized
-              className="h-7 w-7"
+              className="h-7 w-7 dark:hidden"
+            />
+            <Image
+              src="/brand/icon-white-512.png"
+              alt=""
+              aria-hidden
+              width={28}
+              height={28}
+              unoptimized
+              className="hidden h-7 w-7 dark:block"
             />
             Bondzi
           </Link>
         ) : (
-          <Image
-            src="/brand/icon-black.png"
-            alt="Bondzi"
-            width={28}
-            height={28}
-            priority
-            unoptimized
-            className="mx-auto h-7 w-7"
-          />
+          <>
+            <Image
+              src="/brand/icon-black.png"
+              alt="Bondzi"
+              width={28}
+              height={28}
+              priority
+              unoptimized
+              className="mx-auto h-7 w-7 dark:hidden"
+            />
+            <Image
+              src="/brand/icon-white-512.png"
+              alt=""
+              aria-hidden
+              width={28}
+              height={28}
+              unoptimized
+              className="mx-auto hidden h-7 w-7 dark:block"
+            />
+          </>
         )}
         <Button
           variant="ghost"

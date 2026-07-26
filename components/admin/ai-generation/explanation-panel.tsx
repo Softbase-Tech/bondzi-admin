@@ -150,7 +150,7 @@ export function ExplanationPanel() {
                   onClick={() => toggleSubject(s.id)}
                   className={
                     on
-                      ? "rounded border border-primary bg-primary px-2 py-1 text-xs font-medium text-white"
+                      ? "rounded border border-primary bg-primary px-2 py-1 text-xs font-medium text-primary-foreground"
                       : "rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:border-slate-300"
                   }
                 >

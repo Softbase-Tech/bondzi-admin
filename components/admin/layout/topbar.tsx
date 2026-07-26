@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { initials } from "@/lib/utils";
+import { ThemeToggle } from "./theme-toggle";
 
 /**
  * Builds breadcrumbs from the pathname. `/admin/users/123` →
@@ -89,6 +90,8 @@ export function Topbar() {
           aria-label="Search questions"
         />
       </form>
+
+      <ThemeToggle />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-ring">

@@ -2,6 +2,17 @@
 @plugin "@tailwindcss/typography";
 
 /*
+ * Dark mode is class-based (not the default prefers-color-scheme media
+ * query) so a `.dark` class on <html> can override the OS preference.
+ * The class is set before paint by the inline script in app/layout.tsx
+ * (system default) and toggled by the ThemeProvider. `.dark *` covers
+ * every descendant; the extra `.dark` term also matches the <html>
+ * element itself. Zero specificity via :where() so `dark:` never wins a
+ * specificity fight it shouldn't.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Bondzi admin — Tailwind v4 theme.
  *
  * Brand alignment: this surface shares colors with the marketing site
@@ -93,4 +104,132 @@ body {
 }
 *::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ---------------------------------------------------------------------------
+ * Dark theme.
+ *
+ * The admin is slate-based and 100+ files reach for the raw Tailwind
+ * `slate-*` / `white` palette (bg-white cards, text-slate-900 headings,
+ * border-slate-200, …). Rather than sprinkle `dark:` variants across
+ * ~700 usages, we remap the CSS variables those utilities resolve to.
+ * In Tailwind v4 every colour utility compiles to `var(--color-…)`, so
+ * redefining the variables inside `.dark` re-skins the whole surface in
+ * one place — light mode is left completely untouched.
+ *
+ * The slate ramp is *inverted* (50 = darkest, 900 = lightest) because in
+ * this design low steps are backgrounds and high steps are text; flip
+ * the ends and every neutral lands where dark mode wants it. `white`
+ * becomes the card surface. The handful of places that need white to
+ * STAY white (text on a coloured button, modal scrims) are pinned in
+ * their components — see button/badge usages of `primary-foreground` and
+ * the `bg-black/*` overlays in dialog.tsx / sheet.tsx.
+ * ------------------------------------------------------------------------- */
+.dark {
+  /* Semantic tokens (mirror of the @theme light values above). */
+  --color-background: #0b1220;
+  --color-foreground: #f8fafc;
+  --color-muted: #1e293b;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #334155;
+  --color-input: #334155;
+  /* ring / primary keep the brand orange — it reads well on dark. */
+
+  --color-secondary: #1e293b;
+  --color-secondary-foreground: #f1f5f9;
+
+  /* Active nav row / selected table row: warm dark surface + a lighter
+     orange text so the deep-orange brand ink stays legible on dark. */
+  --color-accent: #33241b;
+  --color-accent-foreground: #ff8c5e;
+  --color-primary-deep: #ff8c5e;
+
+  --color-yellow-soft: #2a2410;
+  --color-xp: #b892f0;
+  --color-xp-soft: #241a33;
+  /* success / warning / destructive keep their saturated hues. */
+
+  /* Neutral ramp — inverted so backgrounds darken and text lightens. */
+  --color-white: #111827; /* card / topbar / sidebar / popover surface */
+  --color-slate-50: #0b1220; /* page background, inset inputs */
+  --color-slate-100: #1e293b; /* raised: hover rows, secondary buttons */
+  --color-slate-200: #334155; /* borders, skeletons, dividers */
+  --color-slate-300: #475569; /* stronger borders, switch track */
+  --color-slate-400: #64748b; /* faint text / placeholder */
+  --color-slate-500: #94a3b8; /* muted text (most common) */
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0; /* secondary text, ghost button */
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc; /* headings, primary text */
+  --color-slate-950: #ffffff;
+
+  /* Status ramps — dark tinted fills/borders + lightened ink so pills
+     (success/warning/danger/info) stay readable on dark surfaces. */
+  --color-rose-50: #2a1218;
+  --color-rose-200: #7f1d33;
+  --color-rose-300: #9f1239;
+  --color-rose-400: #fb7185;
+  --color-rose-600: #fb7185;
+  --color-rose-700: #fda4af;
+  --color-rose-900: #fecdd3;
+
+  --color-emerald-50: #0c2419;
+  --color-emerald-200: #065f46;
+  --color-emerald-300: #047857;
+  --color-emerald-600: #34d399;
+  --color-emerald-700: #6ee7b7;
+
+  --color-amber-50: #241a08;
+  --color-amber-200: #78350f;
+  --color-amber-300: #92400e;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+
+  --color-sky-50: #0a1a29;
+  --color-sky-200: #075985;
+  --color-sky-800: #7dd3fc;
+  --color-sky-900: #bae6fd;
+
+  --color-blue-50: #0a1a2f;
+  --color-blue-300: #1d4ed8;
+  --color-blue-700: #93c5fd;
+
+  --color-red-500: #f87171;
+  --color-red-600: #f87171;
+}
+
+/* Scrollbar tune for dark mode. */
+.dark *::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/*
+ * Recharts draws its neutral chrome — grid lines, axes, tick labels and
+ * the default tooltip — with light colours passed as props on each
+ * chart. Rather than thread the theme through every dashboard chart, we
+ * override the generated SVG/DOM here. Presentation attributes lose to
+ * author CSS, so grid/axis strokes flip cleanly; `!important` handles
+ * the tooltip's inline styles. Saturated data-series colours are left
+ * alone — they read fine on dark.
+ */
+.dark .recharts-cartesian-grid line,
+.dark .recharts-cartesian-axis-line,
+.dark .recharts-cartesian-axis-tick-line {
+  stroke: var(--color-border);
+}
+.dark .recharts-text {
+  fill: var(--color-muted-foreground) !important;
+}
+.dark .recharts-default-tooltip {
+  background: var(--color-background) !important;
+  border-color: var(--color-border) !important;
+}
+.dark .recharts-tooltip-label,
+.dark .recharts-tooltip-item {
+  color: var(--color-foreground) !important;
 }

@@ -2,8 +2,17 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/providers/toaster";
 import "./globals.css";
+
+/*
+ * Runs before first paint (blocking, in <head>) so the correct theme is
+ * on <html> before the body renders — no flash of the wrong theme. Reads
+ * the stored choice; falls back to the OS preference (the default). Kept
+ * dependency-free and inlined; mirrors the logic in ThemeProvider.
+ */
+const themeScript = `(function(){try{var t=localStorage.getItem("bondzi-theme");var d=t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,7 +39,11 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       {/*
         suppressHydrationWarning on <body>: some browser extensions (e.g.
         ColorZilla injecting `cz-shortcut-listen`) add attributes to body
@@ -42,10 +55,12 @@ export default function RootLayout({
         className="min-h-full bg-slate-50 text-slate-900"
         suppressHydrationWarning
       >
-        <AuthProvider>
-          <QueryProvider>{children}</QueryProvider>
-        </AuthProvider>
-        <Toaster />
+        <ThemeProvider>
+          <AuthProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </AuthProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

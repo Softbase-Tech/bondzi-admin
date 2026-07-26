@@ -29,7 +29,7 @@ export function ExamTypeToggle({ value, onChange, className }: Props) {
           className={cn(
             "px-3 py-1.5 rounded-[5px] font-medium transition-colors",
             value === opt
-              ? "bg-primary text-white"
+              ? "bg-primary text-primary-foreground"
               : "text-slate-600 hover:bg-slate-50",
           )}
         >
