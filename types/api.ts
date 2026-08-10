@@ -1034,3 +1034,186 @@ export interface EntitlementPolicy {
   updatedAt: string;
   updatedBy: string | null;
 }
+
+// =========================================================================
+// Partner portal
+// -------------------------------------------------------------------------
+// Mirrors backend `src/modules/partners/entities/*.entity.ts`. Keep this
+// block in sync with `common/types/enums.ts` on the backend when statuses
+// change.
+// =========================================================================
+
+export type PartnerStatus = "pending" | "active" | "suspended" | "banned";
+export type MomoProvider = "mtn" | "airteltigo" | "telecel" | "other";
+export type PartnerCommissionType =
+  | "plus_subscription"
+  | "signup_batch"
+  | "answers_bonus"
+  | "plus_subscription_clawback";
+export type PartnerCommissionStatus =
+  | "pending"
+  | "approved"
+  | "flagged"
+  | "clawed_back"
+  | "paid";
+export type PartnerPayoutStatus = "pending" | "paid" | "failed";
+export type PartnerFraudSeverity = "low" | "medium" | "high";
+export type PartnerFraudEventType =
+  | "attribution_flag"
+  | "commission_flag"
+  | "manual";
+export type PartnerAppealStatus = "open" | "upheld" | "denied";
+export type PartnerBannerAspect = "square" | "story" | "landscape";
+
+export interface Partner {
+  id: string;
+  userId: string | null;
+  email: string;
+  phone: string;
+  fullName: string;
+  countryCode: string;
+  momoProvider: MomoProvider;
+  momoNumber: string;
+  momoAccountName: string;
+  status: PartnerStatus;
+  agreedTermsVersionId: string;
+  fraudFlagCount: number;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  suspendedAt: string | null;
+  bannedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerReferralCode {
+  id: string;
+  partnerId: string;
+  code: string;
+  label: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PartnerDetail {
+  partner: Partner;
+  defaultCode: PartnerReferralCode | null;
+  attributionsCount: number;
+  approvedUnpaidGhs: string;
+  paidCommissionCount: number;
+  totalPaidGhs: string;
+}
+
+export interface PartnerCommission {
+  id: string;
+  partnerId: string;
+  type: PartnerCommissionType;
+  amountGhs: string;
+  currency: string;
+  status: PartnerCommissionStatus;
+  earnedAt: string;
+  paidOutId: string | null;
+  termsVersionId: string;
+  subscriptionId: string | null;
+  userId: string | null;
+  batchUserIds: string[] | null;
+  flagReason: string | null;
+  flaggedAt: string | null;
+  dedupKey: string;
+  eligibilityMeta: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface PartnerPayout {
+  id: string;
+  partnerId: string;
+  weekOf: string;
+  amountGhs: string;
+  status: PartnerPayoutStatus;
+  invoiceNumber: string;
+  invoicePdfUrl: string | null;
+  momoProvider: MomoProvider;
+  momoNumber: string;
+  momoReference: string | null;
+  markedPaidBy: string | null;
+  markedPaidAt: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface PartnerPayoutPreview {
+  partnerId: string;
+  totalGhs: string;
+  commissionCount: number;
+  commissions: PartnerCommission[];
+}
+
+export interface PartnerFraudEvent {
+  id: string;
+  partnerId: string;
+  type: PartnerFraudEventType;
+  severity: PartnerFraudSeverity;
+  subjectRef: string | null;
+  reason: string;
+  detectedAt: string;
+  resolved: boolean;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+}
+
+export interface PartnerAppeal {
+  id: string;
+  partnerId: string;
+  appealNumber: number;
+  openedAt: string;
+  body: string;
+  attachments: string[];
+  status: PartnerAppealStatus;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolutionNote: string | null;
+}
+
+export interface PartnerTermsVersion {
+  id: string;
+  version: number;
+  title: string;
+  bodyMd: string;
+  plusWassce: string;
+  plusNovdec: string;
+  plusBece: string;
+  signupBatchSize: number;
+  signupBatchAmountGhs: string;
+  signupMinCompletedAnswers: number;
+  answersBonusThreshold: number;
+  answersBonusAmountGhs: string;
+  attributionWindowDays: number;
+  maxFraudFlagsBeforeBlock: number;
+  maxAppeals: number;
+  effectiveFrom: string;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface PartnerBanner {
+  id: string;
+  label: string;
+  description: string | null;
+  imageUrl: string;
+  aspect: PartnerBannerAspect;
+  widthPx: number | null;
+  heightPx: number | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  nextCursor: string | null;
+}

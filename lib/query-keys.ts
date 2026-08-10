@@ -153,4 +153,23 @@ export const QK = {
   SCHOOL_DETAIL: (id: string) => ["schools", id] as const,
   CLASS_PROGRESS: (schoolId: string) =>
     ["schools", schoolId, "progress"] as const,
+
+  // Partner portal
+  PARTNERS_LIST: (filters: Record<string, unknown>) =>
+    ["partners", "list", filters] as const,
+  PARTNER_DETAIL: (id: string) => ["partners", id, "detail"] as const,
+  PARTNER_COMMISSIONS: (filters: Record<string, unknown>) =>
+    ["partners", "commissions", filters] as const,
+  PARTNER_PAYOUTS: (filters: Record<string, unknown>) =>
+    ["partners", "payouts", filters] as const,
+  PARTNER_PAYOUT_DETAIL: (id: string) =>
+    ["partners", "payouts", id] as const,
+  PARTNER_PAYOUT_PREVIEW: (partnerId: string) =>
+    ["partners", partnerId, "payouts", "preview"] as const,
+  PARTNER_APPEALS: (filters: Record<string, unknown>) =>
+    ["partners", "appeals", filters] as const,
+  PARTNER_FRAUD_EVENTS: (filters: Record<string, unknown>) =>
+    ["partners", "fraud-events", filters] as const,
+  PARTNER_TERMS_LIST: () => ["partners", "terms"] as const,
+  PARTNER_BANNERS_LIST: () => ["partners", "banners"] as const,
 } as const;
