@@ -168,6 +168,10 @@ export const QK = {
     ["partners", partnerId, "payouts", "preview"] as const,
   PARTNER_APPEALS: (filters: Record<string, unknown>) =>
     ["partners", "appeals", filters] as const,
+  PARTNER_REFERRALS: (
+    partnerId: string,
+    filters: Record<string, unknown>,
+  ) => ["partners", partnerId, "referrals", filters] as const,
   PARTNER_FRAUD_EVENTS: (filters: Record<string, unknown>) =>
     ["partners", "fraud-events", filters] as const,
   PARTNER_TERMS_LIST: () => ["partners", "terms"] as const,

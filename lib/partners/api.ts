@@ -15,6 +15,8 @@ import type {
   PartnerPayout,
   PartnerPayoutPreview,
   PartnerPayoutStatus,
+  PartnerReferralSort,
+  PartnerReferralsResult,
   PartnerStatus,
   PartnerTermsVersion,
 } from "@/types/api";
@@ -81,6 +83,17 @@ export function resolveFlaggedCommission(
       ? `/admin/partners/commissions/${id}/approve`
       : `/admin/partners/commissions/${id}/clawback`;
   return unwrap<PartnerCommission>(api.post(url, note ? { note } : {}));
+}
+
+// -------------------------- Referrals ----------------------------
+
+export function listPartnerReferrals(
+  partnerId: string,
+  params: { codeId?: string; sort?: PartnerReferralSort } = {},
+) {
+  return unwrap<PartnerReferralsResult>(
+    api.get(`/admin/partners/${partnerId}/referrals`, { params }),
+  );
 }
 
 // -------------------------- Payouts ------------------------------

@@ -1149,6 +1149,45 @@ export interface PartnerPayoutPreview {
   commissions: PartnerCommission[];
 }
 
+export type PartnerReferralEngagement = "new" | "engaged" | "committed";
+
+export type PartnerReferralCommissionStatus =
+  | "none"
+  | "pending"
+  | "approved"
+  | "flagged"
+  | "paid"
+  | "clawed_back";
+
+export interface PartnerReferralRow {
+  userId: string;
+  handle: string;
+  attributedAt: string;
+  codeId: string;
+  code: string;
+  codeLabel: string;
+  isDefaultCode: boolean;
+  answerCount: number;
+  engagementBucket: PartnerReferralEngagement;
+  hasPaidPlus: boolean;
+  commissionsEarnedGhs: string;
+  commissionsPaidGhs: string;
+  commissionStatus: PartnerReferralCommissionStatus;
+}
+
+export interface PartnerReferralsResult {
+  items: PartnerReferralRow[];
+  totals: {
+    totalReferrals: number;
+    activeUsers: number;
+    paidPlus: number;
+    earnedGhs: string;
+    paidGhs: string;
+  };
+}
+
+export type PartnerReferralSort = "recent" | "engaged" | "earning";
+
 export interface PartnerFraudEvent {
   id: string;
   partnerId: string;

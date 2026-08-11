@@ -22,6 +22,7 @@ import {
   downloadPayoutInvoice,
   getPartnerDetail,
   listCommissions,
+  listPartnerReferrals,
   listPayouts,
   markPayoutFailed,
   markPayoutPaid,
@@ -59,6 +60,9 @@ import type {
   Partner,
   PartnerCommission,
   PartnerPayout,
+  PartnerReferralCommissionStatus,
+  PartnerReferralEngagement,
+  PartnerReferralSort,
 } from "@/types/api";
 import { ApproveOrHoldDialog } from "@/components/admin/partners/action-dialog";
 
@@ -203,12 +207,16 @@ export default function PartnerDetailPage({
 
       <ProfileCard partner={partner} defaultCodeText={data.defaultCode?.code} />
 
-      <Tabs defaultValue="commissions">
+      <Tabs defaultValue="referrals">
         <TabsList>
+          <TabsTrigger value="referrals">Referrals</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
           <TabsTrigger value="appeals">Appeals</TabsTrigger>
         </TabsList>
+        <TabsContent value="referrals">
+          <ReferralsTab partnerId={id} />
+        </TabsContent>
         <TabsContent value="commissions">
           <CommissionsTab partnerId={id} />
         </TabsContent>
@@ -751,5 +759,214 @@ function AppealsTab({ partnerId }: { partnerId: string }) {
         </TableBody>
       </Table>
     </Card>
+  );
+}
+
+// ==========================================================================
+// Referrals tab
+// ==========================================================================
+
+function ReferralsTab({ partnerId }: { partnerId: string }) {
+  const [sort, setSort] = useState<PartnerReferralSort>("recent");
+  const filters = { sort };
+  const { data, isLoading } = useQuery({
+    queryKey: QK.PARTNER_REFERRALS(partnerId, filters),
+    queryFn: () => listPartnerReferrals(partnerId, { sort }),
+  });
+
+  if (isLoading) return <Skeleton className="h-40 w-full" />;
+
+  const items = data?.items ?? [];
+  const totals = data?.totals ?? {
+    totalReferrals: 0,
+    activeUsers: 0,
+    paidPlus: 0,
+    earnedGhs: "0.00",
+    paidGhs: "0.00",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <ReferralsTile label="Total" value={String(totals.totalReferrals)} />
+        <ReferralsTile
+          label="Active"
+          value={String(totals.activeUsers)}
+          hint="10+ answers"
+        />
+        <ReferralsTile label="Paid Plus" value={String(totals.paidPlus)} />
+        <ReferralsTile label="Earned" value={`GHS ${totals.earnedGhs}`} />
+        <ReferralsTile label="Paid out" value={`GHS ${totals.paidGhs}`} />
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-slate-500">
+          Handles only — no names, emails, or phone numbers.
+        </div>
+        <div>
+          <label
+            htmlFor="referrals-sort"
+            className="text-[11px] font-medium uppercase tracking-wider text-slate-500 mr-2"
+          >
+            Sort
+          </label>
+          <select
+            id="referrals-sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as PartnerReferralSort)}
+            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900"
+          >
+            <option value="recent">Most recent</option>
+            <option value="engaged">Most engaged</option>
+            <option value="earning">Highest earning</option>
+          </select>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <Card className="p-6 text-sm text-slate-500">
+          No referrals attributed to this partner yet.
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Referral</TableHead>
+                <TableHead>Signed up</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Engagement</TableHead>
+                <TableHead>Paid Plus</TableHead>
+                <TableHead className="text-right">Earned</TableHead>
+                <TableHead>Commission</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((r) => (
+                <TableRow key={r.userId}>
+                  <TableCell className="text-slate-900">
+                    <div className="font-medium">{r.handle}</div>
+                    <div className="text-[11px] font-mono text-slate-400">
+                      user {r.userId.slice(0, 8)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-500">
+                    {formatDate(r.attributedAt)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs tracking-wider text-slate-800">
+                        {r.code}
+                      </span>
+                      {r.isDefaultCode ? (
+                        <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                          Default
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {r.codeLabel}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <EngagementPill bucket={r.engagementBucket} />
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      {r.answerCount} answer
+                      {r.answerCount === 1 ? "" : "s"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {r.hasPaidPlus ? (
+                      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-slate-900">
+                    GHS {r.commissionsEarnedGhs}
+                    {Number(r.commissionsPaidGhs) > 0 ? (
+                      <div className="text-[11px] font-normal text-slate-500">
+                        {r.commissionsPaidGhs} paid
+                      </div>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <ReferralCommissionPill status={r.commissionStatus} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function ReferralsTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <Card className="p-3">
+      <p className="text-[10.5px] font-medium uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
+      {hint ? <p className="text-[10.5px] text-slate-500">{hint}</p> : null}
+    </Card>
+  );
+}
+
+function EngagementPill({ bucket }: { bucket: PartnerReferralEngagement }) {
+  const meta =
+    bucket === "committed"
+      ? { label: "Committed", tone: "border-emerald-200 bg-emerald-50 text-emerald-700" }
+      : bucket === "engaged"
+        ? { label: "Engaged", tone: "border-orange-200 bg-orange-50 text-orange-700" }
+        : { label: "New", tone: "border-slate-200 bg-slate-50 text-slate-600" };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${meta.tone}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
+function ReferralCommissionPill({
+  status,
+}: {
+  status: PartnerReferralCommissionStatus;
+}) {
+  const meta = ((): { label: string; tone: string } => {
+    switch (status) {
+      case "paid":
+        return { label: "Paid", tone: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+      case "approved":
+        return { label: "Approved", tone: "border-sky-200 bg-sky-50 text-sky-700" };
+      case "flagged":
+        return { label: "Flagged", tone: "border-rose-200 bg-rose-50 text-rose-700" };
+      case "pending":
+        return { label: "Pending", tone: "border-orange-200 bg-orange-50 text-orange-700" };
+      case "clawed_back":
+        return { label: "Clawed back", tone: "border-rose-200 bg-rose-50 text-rose-700" };
+      default:
+        return { label: "None yet", tone: "border-slate-200 bg-slate-50 text-slate-500" };
+    }
+  })();
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${meta.tone}`}
+    >
+      {meta.label}
+    </span>
   );
 }
