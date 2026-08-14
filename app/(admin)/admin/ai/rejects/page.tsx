@@ -29,7 +29,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { AiRejectAggRow, AiRejectLogPage } from "@/types/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type {
+  AiRejectAggRow,
+  AiRejectLogPage,
+  AiRejectLogRow,
+} from "@/types/api";
 
 /**
  * Admin reject-log browser. Two panels stacked:
@@ -56,6 +66,9 @@ export default function AiRejectsPage() {
   const [provider, setProvider] = useState<string>("__all__");
   const [modelFilter, setModelFilter] = useState("");
   const [offset, setOffset] = useState(0);
+  // The exact model output that failed validation — the only way to tell a
+  // genuinely malformed response apart from an over-strict validator.
+  const [viewing, setViewing] = useState<AiRejectLogRow | null>(null);
 
   const filters = useMemo(
     () => ({
@@ -203,13 +216,14 @@ export default function AiRejectsPage() {
                   <TableHead>Model</TableHead>
                   <TableHead>Job</TableHead>
                   <TableHead>Detail</TableHead>
+                  <TableHead>Output</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {raw.isLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={7}>
+                      <TableCell colSpan={8}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
                     </TableRow>
@@ -240,6 +254,19 @@ export default function AiRejectsPage() {
                       </TableCell>
                       <TableCell className="max-w-[400px] text-xs text-slate-600">
                         {row.detail ?? ""}
+                      </TableCell>
+                      <TableCell>
+                        {row.rawOutput ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setViewing(row)}
+                          >
+                            View
+                          </Button>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -272,6 +299,23 @@ export default function AiRejectsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={viewing !== null}
+        onOpenChange={(open) => !open && setViewing(null)}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Model output — {viewing?.reason}</DialogTitle>
+          </DialogHeader>
+          {viewing?.detail ? (
+            <p className="text-xs text-slate-500">{viewing.detail}</p>
+          ) : null}
+          <pre className="mt-2 max-h-[60vh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
+            {viewing?.rawOutput ?? "(no output captured)"}
+          </pre>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
