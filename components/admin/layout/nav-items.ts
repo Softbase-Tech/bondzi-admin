@@ -22,6 +22,7 @@ import {
   Monitor,
   ShieldAlert,
   Sparkles,
+  Medal,
   ServerCog,
   Share2,
   SlidersHorizontal,
@@ -184,6 +185,11 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/admin/config/ai-reviews",
         label: "AI Reviews",
         icon: Sparkles,
+      },
+      {
+        href: "/admin/config/achievements",
+        label: "Achievements",
+        icon: Medal,
       },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
       {

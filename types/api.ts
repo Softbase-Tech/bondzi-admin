@@ -1017,6 +1017,47 @@ export interface AiReviewConfig {
   updatedAt: string;
 }
 
+// ---------- Achievements ----------
+
+/**
+ * Which stat drives an achievement's unlock. Backend enum guarded at
+ * the CHECK constraint on `achievements.metric_key`.
+ *
+ *   answers_count   — cumulative questions answered
+ *   streak_max      — max(current, longest)
+ *   longest_streak  — longest strictly
+ *   accuracy_pct    — rolling accuracy (%). Uses `minAnswers` to gate.
+ *   level           — gamification level
+ */
+export type AchievementMetricKey =
+  | "answers_count"
+  | "streak_max"
+  | "longest_streak"
+  | "accuracy_pct"
+  | "level";
+
+/**
+ * Catalogue row shape as returned by GET /admin/achievements. The
+ * mobile view is a richer merged shape but this admin type stays
+ * focused on the CRUD fields.
+ */
+export interface Achievement {
+  id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  metricKey: AchievementMetricKey;
+  thresholdValue: number;
+  minAnswers: number | null;
+  iconKey: string;
+  gradientStart: string;
+  gradientEnd: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Every gated feature has a stable key here — must stay in lock-step
  * with `EntitlementService` in
