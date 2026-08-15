@@ -176,4 +176,8 @@ export const QK = {
     ["partners", "fraud-events", filters] as const,
   PARTNER_TERMS_LIST: () => ["partners", "terms"] as const,
   PARTNER_BANNERS_LIST: () => ["partners", "banners"] as const,
+  SUPPORT_TICKETS: (filters: Record<string, unknown>) =>
+    ["support", "tickets", filters] as const,
+  SUPPORT_TICKET_DETAIL: (id: string) =>
+    ["support", "tickets", id, "detail"] as const,
 } as const;

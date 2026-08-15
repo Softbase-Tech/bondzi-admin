@@ -125,6 +125,12 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Support",
+    items: [
+      { href: "/admin/support", label: "Tickets", icon: MessageSquare },
+    ],
+  },
+  {
     label: "Partners",
     items: [
       { href: "/admin/partners", label: "Partners", icon: Handshake },
