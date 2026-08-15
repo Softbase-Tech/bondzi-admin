@@ -180,6 +180,11 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: SlidersHorizontal,
       },
       { href: "/admin/config/ads", label: "Ads (P2)", icon: BarChart3 },
+      {
+        href: "/admin/config/ai-reviews",
+        label: "AI Reviews",
+        icon: Sparkles,
+      },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
       {
         href: "/admin/notifications/log",

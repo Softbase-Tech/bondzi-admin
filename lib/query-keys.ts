@@ -129,6 +129,8 @@ export const QK = {
 
   // Ads config
   ADS_CONFIG: () => ["ads", "config"] as const,
+  // AI Study Review monthly limits
+  AI_REVIEW_CONFIG: () => ["ai-reviews", "config"] as const,
 
   // Jobs
   JOBS_STATUS: () => ["jobs", "status"] as const,

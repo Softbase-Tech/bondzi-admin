@@ -1003,6 +1003,20 @@ export interface AdConfig {
   updatedAt: string;
 }
 
+// ---------- AI Study Review limits ----------
+
+/**
+ * Admin-editable monthly limits for the user-triggered AI Study Review.
+ * Free tier is not represented (Free cannot generate reviews). Limits
+ * are per-calendar-month and do not carry forward.
+ */
+export interface AiReviewConfig {
+  id: string;
+  plusMonthlyLimit: number;
+  proMonthlyLimit: number;
+  updatedAt: string;
+}
+
 /**
  * Every gated feature has a stable key here — must stay in lock-step
  * with `EntitlementService` in
