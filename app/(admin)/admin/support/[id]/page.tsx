@@ -178,17 +178,39 @@ export default function SupportTicketDetailPage({
                 </div>
                 {m.attachments.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {m.attachments.map((a) => (
-                      <a
-                        key={a.url}
-                        href={a.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center rounded-md bg-white/70 px-2 py-1 text-xs text-slate-700 hover:bg-white"
-                      >
-                        📎 {a.originalFilename ?? "attachment"}
-                      </a>
-                    ))}
+                    {m.attachments.map((a) => {
+                      const href = absoluteUrl(a.url);
+                      if (a.mime.startsWith("image/")) {
+                        return (
+                          <a
+                            key={a.url}
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block"
+                            title={a.originalFilename ?? "attachment"}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={href}
+                              alt={a.originalFilename ?? "attachment"}
+                              className="h-32 w-32 rounded-lg object-cover border border-white/70 hover:opacity-90"
+                            />
+                          </a>
+                        );
+                      }
+                      return (
+                        <a
+                          key={a.url}
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center rounded-md bg-white/70 px-2 py-1 text-xs text-slate-700 hover:bg-white"
+                        >
+                          📎 {a.originalFilename ?? "attachment"}
+                        </a>
+                      );
+                    })}
                   </div>
                 ) : null}
                 <div className="text-[11px] text-slate-500 mt-2">
@@ -261,6 +283,12 @@ export default function SupportTicketDetailPage({
       ) : null}
     </div>
   );
+}
+
+function absoluteUrl(url: string): string {
+  if (url.startsWith("http")) return url;
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  return `${base}${url}`;
 }
 
 function prettyCategory(c: string): string {
