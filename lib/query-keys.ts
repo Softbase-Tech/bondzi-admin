@@ -133,6 +133,8 @@ export const QK = {
   AI_REVIEW_CONFIG: () => ["ai-reviews", "config"] as const,
   // Achievements catalogue
   ACHIEVEMENTS: () => ["achievements", "admin"] as const,
+  // FAQ knowledge base
+  FAQ: () => ["faq", "admin"] as const,
 
   // Jobs
   JOBS_STATUS: () => ["jobs", "status"] as const,

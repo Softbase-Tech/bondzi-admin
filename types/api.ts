@@ -1306,6 +1306,23 @@ export interface PartnerBanner {
   updatedAt: string;
 }
 
+/**
+ * FAQ knowledge base row. Backend `faq_entries` → mirrored here for
+ * the admin CRUD page. `slug` doubles as the mobile deep-link path
+ * (/help/faq/:slug); the admin UI warns against renaming an existing
+ * slug because a live share link out in the wild would break.
+ */
+export interface FaqEntry {
+  id: string;
+  slug: string;
+  question: string;
+  answerMarkdown: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;

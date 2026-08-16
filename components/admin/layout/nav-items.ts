@@ -13,6 +13,7 @@ import {
   Gift,
   GraduationCap,
   Handshake,
+  HelpCircle,
   History,
   Image as ImageIcon,
   Inbox,
@@ -191,6 +192,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Achievements",
         icon: Medal,
       },
+      { href: "/admin/config/faq", label: "FAQ", icon: HelpCircle },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
       {
         href: "/admin/notifications/log",
