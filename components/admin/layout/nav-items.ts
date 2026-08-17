@@ -188,6 +188,11 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Sparkles,
       },
       {
+        href: "/admin/syllabus",
+        label: "Syllabus review",
+        icon: BookOpen,
+      },
+      {
         href: "/admin/config/achievements",
         label: "Achievements",
         icon: Medal,

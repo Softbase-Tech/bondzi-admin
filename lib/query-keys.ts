@@ -131,6 +131,10 @@ export const QK = {
   ADS_CONFIG: () => ["ads", "config"] as const,
   // AI Study Review monthly limits
   AI_REVIEW_CONFIG: () => ["ai-reviews", "config"] as const,
+  // Syllabus review
+  SYLLABUS_INDICATORS: (filters: Record<string, unknown>) =>
+    ["syllabus", "indicators", filters] as const,
+  SYLLABUS_SUMMARY: () => ["syllabus", "summary"] as const,
   // Achievements catalogue
   ACHIEVEMENTS: () => ["achievements", "admin"] as const,
   // FAQ knowledge base

@@ -1328,3 +1328,24 @@ export interface Paginated<T> {
   total: number;
   nextCursor: string | null;
 }
+
+// ---------- Syllabus review (curriculum spine) ----------
+
+export interface SyllabusIndicatorRow {
+  id: string;
+  code: string;
+  statement: string;
+  workedContent: string | null;
+  targetDokLevels: number[] | null;
+  status: "draft" | "approved";
+  formLevel: number;
+  subjectId: string;
+  contentStandardCode: string;
+  isEmbedded: boolean;
+}
+
+export interface SyllabusSummaryRow {
+  subjectId: string;
+  draft: number;
+  approved: number;
+}
