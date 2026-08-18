@@ -9,8 +9,8 @@ import { usePagination } from "@/hooks/use-pagination";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import {
   Table,
   TableBody,
@@ -34,7 +34,12 @@ import type { ExamType, Paginated, User } from "@/types/api";
 
 export default function UsersPage() {
   const { page, limit, setPage } = usePagination(20);
-  const [examFilter, setExamFilter] = useState<ExamType | "all">("all");
+  const [examFilter, setExamFilterRaw] = useState<ExamType | "all">("all");
+
+  const setExamFilter = (v: ExamType | "all") => {
+    setExamFilterRaw(v);
+    setPage(1);
+  };
 
   const filters = {
     page,
@@ -159,24 +164,13 @@ export default function UsersPage() {
         </Table>
       </Card>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={(data?.items.length ?? 0) < limit}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={data?.items.length ?? 0}
+        total={data?.total ?? null}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

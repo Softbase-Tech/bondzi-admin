@@ -5,9 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
+import { usePagination } from "@/hooks/use-pagination";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import {
   Table,
   TableBody,
@@ -23,10 +25,13 @@ import type { AuditLogRow, Paginated } from "@/types/api";
 
 export default function AuditPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const { page, limit, setPage } = usePagination(20);
   const { data, isLoading } = useQuery({
-    queryKey: QK.AUDIT_LOG({}),
+    queryKey: QK.AUDIT_LOG({ page, limit }),
     queryFn: () =>
-      unwrap<Paginated<AuditLogRow>>(api.get("/admin/audit")).catch(
+      unwrap<Paginated<AuditLogRow>>(
+        api.get("/admin/audit", { params: { page, limit } }),
+      ).catch(
         () =>
           ({
             items: [],

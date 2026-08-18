@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/layout/page-header";
 import { RedactedJson } from "@/components/admin/redacted-json";
-import { formatDateTime } from "@/lib/utils";
+import { TablePager } from "@/components/admin/shared/table-pager";
+import { usePagination } from "@/hooks/use-pagination";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 import type { BillingLog, BillingLogProcessStatus } from "@/types/api";
 
 const STATUS_TONE: Record<BillingLogProcessStatus, string> = {
@@ -48,19 +50,29 @@ const STATUS_LABEL: Record<BillingLogProcessStatus, string> = {
 const PAGE_SIZE = 50;
 
 export default function BillingLogPage() {
-  const [statusFilter, setStatusFilter] = useState<
+  const [statusFilter, setStatusFilterRaw] = useState<
     BillingLogProcessStatus | "all"
   >("all");
-  const [page, setPage] = useState(0);
+  const { page, limit, setPage } = usePagination(PAGE_SIZE);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  const setStatusFilter = (v: BillingLogProcessStatus | "all") => {
+    setStatusFilterRaw(v);
+    setPage(1);
+  };
+  const activeFilterCount = statusFilter !== "all" ? 1 : 0;
+  const clearAllFilters = () => {
+    setStatusFilterRaw("all");
+    setPage(1);
+  };
 
   const filters = useMemo(
     () => ({
       processStatus: statusFilter === "all" ? undefined : statusFilter,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
+      limit,
+      offset: (page - 1) * limit,
     }),
-    [statusFilter, page],
+    [statusFilter, page, limit],
   );
 
   const { data, isLoading } = useQuery({
@@ -81,7 +93,6 @@ export default function BillingLogPage() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-6">
@@ -93,10 +104,9 @@ export default function BillingLogPage() {
       <div className="flex items-center gap-3">
         <Select
           value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v as BillingLogProcessStatus | "all");
-            setPage(0);
-          }}
+          onValueChange={(v) =>
+            setStatusFilter(v as BillingLogProcessStatus | "all")
+          }
         >
           <SelectTrigger className="w-72">
             <SelectValue />
@@ -112,8 +122,13 @@ export default function BillingLogPage() {
             <SelectItem value="error">Error</SelectItem>
           </SelectContent>
         </Select>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+            Clear all
+          </Button>
+        )}
         <div className="ml-auto text-sm text-slate-500">
-          {isLoading ? "…" : `${total} events`}
+          {isLoading ? "…" : `${formatNumber(total)} events`}
         </div>
       </div>
 
@@ -194,27 +209,13 @@ export default function BillingLogPage() {
         </Table>
       </Card>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page === 0 || isLoading}
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-        >
-          Previous
-        </Button>
-        <div className="text-xs text-slate-500">
-          Page {page + 1} / {pages}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page + 1 >= pages || isLoading}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={items.length}
+        total={total}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

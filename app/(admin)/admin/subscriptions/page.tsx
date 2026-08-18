@@ -3,8 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
+import { usePagination } from "@/hooks/use-pagination";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import {
   Table,
   TableBody,
@@ -26,10 +28,13 @@ import { formatDate, formatGHS } from "@/lib/utils";
 import type { Paginated, Subscription } from "@/types/api";
 
 export default function SubscriptionsPage() {
+  const { page, limit, setPage } = usePagination(20);
   const { data, isLoading } = useQuery({
-    queryKey: QK.SUBSCRIPTIONS_LIST({}),
+    queryKey: QK.SUBSCRIPTIONS_LIST({ page, limit }),
     queryFn: () =>
-      unwrap<Paginated<Subscription>>(api.get("/admin/subscriptions")).catch(
+      unwrap<Paginated<Subscription>>(
+        api.get("/admin/subscriptions", { params: { page, limit } }),
+      ).catch(
         () =>
           // The admin controller we shipped doesn't have /admin/subscriptions —
           // falling back to an empty paginated shape keeps the page surviveable.
@@ -123,6 +128,14 @@ export default function SubscriptionsPage() {
           </TableBody>
         </Table>
       </Card>
+
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={data?.items.length ?? 0}
+        total={data?.total ?? null}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

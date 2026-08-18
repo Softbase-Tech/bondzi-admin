@@ -8,6 +8,7 @@ import { QK } from "@/lib/query-keys";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { usePagination } from "@/hooks/use-pagination";
 import {
   Select,
   SelectContent,
@@ -24,7 +25,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/layout/page-header";
-import { formatDateTime } from "@/lib/utils";
+import { TablePager } from "@/components/admin/shared/table-pager";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 import type { PaymentAttempt, PaymentAttemptStatus } from "@/types/api";
 
 const STATUS_TONE: Record<PaymentAttemptStatus, string> = {
@@ -40,20 +42,37 @@ const PAGE_SIZE = 50;
 type AlarmFilter = "none" | "duplicate_plus";
 
 export default function PaymentsPage() {
-  const [statusFilter, setStatusFilter] = useState<PaymentAttemptStatus | "all">(
-    "all",
-  );
-  const [alarmFilter, setAlarmFilter] = useState<AlarmFilter>("none");
-  const [page, setPage] = useState(0);
+  const [statusFilter, setStatusFilterRaw] = useState<
+    PaymentAttemptStatus | "all"
+  >("all");
+  const [alarmFilter, setAlarmFilterRaw] = useState<AlarmFilter>("none");
+  const { page, limit, setPage } = usePagination(PAGE_SIZE);
+
+  const setStatusFilter = (v: PaymentAttemptStatus | "all") => {
+    setStatusFilterRaw(v);
+    setPage(1);
+  };
+  const setAlarmFilter = (v: AlarmFilter) => {
+    setAlarmFilterRaw(v);
+    setPage(1);
+  };
+
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) + (alarmFilter !== "none" ? 1 : 0);
+  const clearAllFilters = () => {
+    setStatusFilterRaw("all");
+    setAlarmFilterRaw("none");
+    setPage(1);
+  };
 
   const filters = useMemo(
     () => ({
       status: statusFilter === "all" ? undefined : statusFilter,
       alarm: alarmFilter === "none" ? undefined : alarmFilter,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
+      limit,
+      offset: (page - 1) * limit,
     }),
-    [statusFilter, alarmFilter, page],
+    [statusFilter, alarmFilter, page, limit],
   );
 
   const { data, isLoading } = useQuery({
@@ -73,7 +92,6 @@ export default function PaymentsPage() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,10 +103,7 @@ export default function PaymentsPage() {
       <div className="flex items-center gap-3">
         <Select
           value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v as PaymentAttemptStatus | "all");
-            setPage(0);
-          }}
+          onValueChange={(v) => setStatusFilter(v as PaymentAttemptStatus | "all")}
         >
           <SelectTrigger className="w-48">
             <SelectValue />
@@ -104,10 +119,7 @@ export default function PaymentsPage() {
         </Select>
         <Select
           value={alarmFilter}
-          onValueChange={(v) => {
-            setAlarmFilter(v as AlarmFilter);
-            setPage(0);
-          }}
+          onValueChange={(v) => setAlarmFilter(v as AlarmFilter)}
         >
           <SelectTrigger className="w-72">
             <SelectValue />
@@ -119,8 +131,13 @@ export default function PaymentsPage() {
             </SelectItem>
           </SelectContent>
         </Select>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+            Clear all
+          </Button>
+        )}
         <div className="ml-auto text-sm text-slate-500">
-          {isLoading ? "…" : `${total} attempts`}
+          {isLoading ? "…" : `${formatNumber(total)} attempts`}
         </div>
       </div>
 
@@ -225,27 +242,13 @@ export default function PaymentsPage() {
         </Table>
       </Card>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page === 0 || isLoading}
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-        >
-          Previous
-        </Button>
-        <div className="text-xs text-slate-500">
-          Page {page + 1} / {pages}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page + 1 >= pages || isLoading}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={items.length}
+        total={total}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

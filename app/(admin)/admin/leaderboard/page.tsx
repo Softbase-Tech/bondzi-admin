@@ -138,6 +138,11 @@ export default function LeaderboardPage() {
             )}
           </TableBody>
         </Table>
+        <div className="p-4 text-xs text-slate-500">
+          {isLoading
+            ? "Loading…"
+            : `${formatNumber(data?.length ?? 0)} student${(data?.length ?? 0) === 1 ? "" : "s"} shown · capped at top 100 by the backend for this ${periodType} board.`}
+        </div>
       </Card>
     </div>
   );

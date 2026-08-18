@@ -16,6 +16,8 @@ import {
 import { Coins, Download, Pencil, Check, X } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
+import { usePagination } from "@/hooks/use-pagination";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
 import { PageHeader } from "@/components/admin/layout/page-header";
 import {
@@ -47,6 +49,7 @@ import type {
 
 export default function XpEconomyPage() {
   const qc = useQueryClient();
+  const { page, limit, setPage } = usePagination(20);
 
   const { data: rates, isLoading: ratesLoading } = useQuery({
     queryKey: QK.XP_RATE_CONFIG(),
@@ -75,10 +78,12 @@ export default function XpEconomyPage() {
   });
 
   const { data: log } = useQuery({
-    queryKey: QK.XP_REDEMPTION_LOG({ limit: 50 }),
+    queryKey: QK.XP_REDEMPTION_LOG({ page, limit }),
     queryFn: () =>
       unwrap<Paginated<XpRedemptionLogRow>>(
-        api.get("/admin/xp-economy/redemption-log", { params: { limit: 50 } }),
+        api.get("/admin/xp-economy/redemption-log", {
+          params: { page, limit },
+        }),
       ),
   });
 
@@ -343,6 +348,15 @@ export default function XpEconomyPage() {
             )}
           </TableBody>
         </Table>
+        <div className="pt-3">
+          <TablePager
+            page={page}
+            limit={limit}
+            itemCount={log?.items.length ?? 0}
+            total={log?.total ?? null}
+            onPageChange={setPage}
+          />
+        </div>
       </Section>
     </div>
   );

@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Gift, Trophy } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
+import { usePagination } from "@/hooks/use-pagination";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import { PageHeader } from "@/components/admin/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,10 +41,20 @@ import type {
 } from "@/types/api";
 
 export default function WinnersPage() {
-  const [periodType, setPeriodType] = useState<LeaderboardPeriodType | "all">(
+  const [periodType, setPeriodTypeRaw] = useState<LeaderboardPeriodType | "all">(
     "all",
   );
-  const [examFilter, setExamFilter] = useState<ExamType | "all">("all");
+  const [examFilter, setExamFilterRaw] = useState<ExamType | "all">("all");
+  const { page, limit, setPage } = usePagination(20);
+
+  const setPeriodType = (v: LeaderboardPeriodType | "all") => {
+    setPeriodTypeRaw(v);
+    setPage(1);
+  };
+  const setExamFilter = (v: ExamType | "all") => {
+    setExamFilterRaw(v);
+    setPage(1);
+  };
 
   const [modal, setModal] = useState<{
     examType: ExamType;
@@ -61,9 +73,11 @@ export default function WinnersPage() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: QK.WINNERS_LIST(filters),
+    queryKey: QK.WINNERS_LIST({ ...filters, page, limit }),
     queryFn: () =>
-      unwrap<Paginated<Winner>>(api.get("/admin/winners", { params: filters })),
+      unwrap<Paginated<Winner>>(
+        api.get("/admin/winners", { params: { ...filters, page, limit } }),
+      ),
   });
 
   const { data: hall } = useQuery({
@@ -189,6 +203,18 @@ export default function WinnersPage() {
             </SelectContent>
           </Select>
         </div>
+        {(periodType !== "all" || examFilter !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setPeriodType("all");
+              setExamFilter("all");
+            }}
+          >
+            Clear all
+          </Button>
+        )}
       </Card>
 
       <Card>
@@ -273,6 +299,15 @@ export default function WinnersPage() {
               )}
             </TableBody>
           </Table>
+          <div className="pt-3">
+            <TablePager
+              page={page}
+              limit={limit}
+              itemCount={data?.items.length ?? 0}
+              total={data?.total ?? null}
+              onPageChange={setPage}
+            />
+          </div>
         </CardContent>
       </Card>
 

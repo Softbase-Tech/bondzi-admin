@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/layout/page-header";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import { formatDateTime, truncate } from "@/lib/utils";
 import { FLAG_REASON_LABEL } from "@/lib/constants";
 import type { Paginated, QuestionFlag } from "@/types/api";
@@ -126,24 +127,13 @@ export default function FlagsPage() {
         </Table>
       </Card>
 
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={(data?.items.length ?? 0) < limit}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={data?.items.length ?? 0}
+        total={data?.total ?? null}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

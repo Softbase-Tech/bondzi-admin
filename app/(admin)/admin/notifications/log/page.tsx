@@ -25,7 +25,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/layout/page-header";
-import { formatDateTime } from "@/lib/utils";
+import { TablePager } from "@/components/admin/shared/table-pager";
+import { usePagination } from "@/hooks/use-pagination";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 import type {
   NotificationChannel,
   NotificationLogRow,
@@ -52,22 +54,45 @@ const CHANNEL_TONE: Record<NotificationChannel, string> = {
  *   - User id (paste a user UUID to see only their stream)
  */
 export default function NotificationsLogPage() {
-  const [channelFilter, setChannelFilter] = useState<
+  const [channelFilter, setChannelFilterRaw] = useState<
     NotificationChannel | "all"
   >("all");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [userIdFilter, setUserIdFilter] = useState("");
-  const [page, setPage] = useState(0);
+  const [typeFilter, setTypeFilterRaw] = useState("");
+  const [userIdFilter, setUserIdFilterRaw] = useState("");
+  const { page, limit, setPage } = usePagination(PAGE_SIZE);
+
+  const setChannelFilter = (v: NotificationChannel | "all") => {
+    setChannelFilterRaw(v);
+    setPage(1);
+  };
+  const setTypeFilter = (v: string) => {
+    setTypeFilterRaw(v);
+    setPage(1);
+  };
+  const setUserIdFilter = (v: string) => {
+    setUserIdFilterRaw(v);
+    setPage(1);
+  };
+  const activeFilterCount =
+    (channelFilter !== "all" ? 1 : 0) +
+    (typeFilter.trim() ? 1 : 0) +
+    (userIdFilter.trim() ? 1 : 0);
+  const clearAllFilters = () => {
+    setChannelFilterRaw("all");
+    setTypeFilterRaw("");
+    setUserIdFilterRaw("");
+    setPage(1);
+  };
 
   const filters = useMemo(
     () => ({
       channel: channelFilter === "all" ? undefined : channelFilter,
       type: typeFilter.trim() || undefined,
       userId: userIdFilter.trim() || undefined,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
+      limit,
+      offset: (page - 1) * limit,
     }),
-    [channelFilter, typeFilter, userIdFilter, page],
+    [channelFilter, typeFilter, userIdFilter, page, limit],
   );
 
   const { data, isLoading } = useQuery({
@@ -88,7 +113,6 @@ export default function NotificationsLogPage() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,10 +126,9 @@ export default function NotificationsLogPage() {
           <label className="text-xs text-slate-500">Channel</label>
           <Select
             value={channelFilter}
-            onValueChange={(v) => {
-              setChannelFilter(v as NotificationChannel | "all");
-              setPage(0);
-            }}
+            onValueChange={(v) =>
+              setChannelFilter(v as NotificationChannel | "all")
+            }
           >
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -123,10 +146,7 @@ export default function NotificationsLogPage() {
           <label className="text-xs text-slate-500">Type</label>
           <Input
             value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => setTypeFilter(e.target.value)}
             placeholder="winner | account_credited"
             className="w-48"
           />
@@ -135,16 +155,18 @@ export default function NotificationsLogPage() {
           <label className="text-xs text-slate-500">User id</label>
           <Input
             value={userIdFilter}
-            onChange={(e) => {
-              setUserIdFilter(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => setUserIdFilter(e.target.value)}
             placeholder="UUID"
             className="w-64 font-mono text-xs"
           />
         </div>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+            Clear all
+          </Button>
+        )}
         <div className="ml-auto text-sm text-slate-500">
-          {isLoading ? "…" : `${total} entries`}
+          {isLoading ? "…" : `${formatNumber(total)} entries`}
         </div>
       </div>
 
@@ -243,27 +265,13 @@ export default function NotificationsLogPage() {
         </Table>
       </Card>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page === 0 || isLoading}
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-        >
-          Previous
-        </Button>
-        <div className="text-xs text-slate-500">
-          Page {page + 1} / {pages}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page + 1 >= pages || isLoading}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={items.length}
+        total={total}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

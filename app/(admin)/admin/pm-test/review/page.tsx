@@ -32,6 +32,7 @@ import {
 import { ExamTypeToggle } from "@/components/admin/shared/exam-type-toggle";
 import { DifficultyBadge } from "@/components/admin/questions/difficulty-badge";
 import { ReviewEditSheet } from "@/components/admin/pm-test/review-edit-sheet";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import type {
   AiGenerationJob,
   ExamType,
@@ -50,12 +51,43 @@ export default function PmTestReviewPage() {
   const qc = useQueryClient();
   const { page, limit, setPage } = usePagination(25);
 
-  const [examType, setExamType] = useState<ExamType>("wassce");
-  const [formLevel, setFormLevel] = useState<string>("all");
-  const [subjectId, setSubjectId] = useState<string>("all");
-  const [batch, setBatch] = useState<string>("all");
+  const [examType, setExamTypeRaw] = useState<ExamType>("wassce");
+  const [formLevel, setFormLevelRaw] = useState<string>("all");
+  const [subjectId, setSubjectIdRaw] = useState<string>("all");
+  const [batch, setBatchRaw] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<PmTestQuestion | null>(null);
+
+  // Any filter change invalidates the current page cursor — otherwise
+  // switching from a queue with 10 pages to one with 2 leaves the
+  // reviewer stranded on an empty "page 5" and looks like a bug.
+  const setExamType = (v: ExamType) => {
+    setExamTypeRaw(v);
+    setPage(1);
+  };
+  const setFormLevel = (v: string) => {
+    setFormLevelRaw(v);
+    setPage(1);
+  };
+  const setSubjectId = (v: string) => {
+    setSubjectIdRaw(v);
+    setPage(1);
+  };
+  const setBatch = (v: string) => {
+    setBatchRaw(v);
+    setPage(1);
+  };
+
+  const activeFilterCount =
+    (formLevel !== "all" ? 1 : 0) +
+    (subjectId !== "all" ? 1 : 0) +
+    (batch !== "all" ? 1 : 0);
+  const clearAllFilters = () => {
+    setFormLevelRaw("all");
+    setSubjectIdRaw("all");
+    setBatchRaw("all");
+    setPage(1);
+  };
 
   const filters = useMemo(
     () => ({
@@ -303,6 +335,17 @@ export default function PmTestReviewPage() {
           </Select>
         </div>
 
+        {activeFilterCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+            className="text-xs"
+          >
+            Clear all
+          </Button>
+        )}
+
         {selected.size > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-slate-600">
@@ -438,28 +481,14 @@ export default function PmTestReviewPage() {
             )}
           </TableBody>
         </Table>
-        <CardContent className="flex items-center justify-between text-sm text-slate-500">
-          <span>
-            Showing {data?.items.length ?? 0} of {data?.total ?? 0}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Previous
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={(data?.items.length ?? 0) < limit}
-              onClick={() => setPage(page + 1)}
-            >
-              Next
-            </Button>
-          </div>
+        <CardContent>
+          <TablePager
+            page={page}
+            limit={limit}
+            itemCount={data?.items.length ?? 0}
+            total={data?.total ?? null}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

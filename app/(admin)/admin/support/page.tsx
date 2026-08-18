@@ -9,6 +9,7 @@ import { listTickets, type SupportCategory, type SupportStatus } from "@/lib/sup
 import { PageHeader } from "@/components/admin/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -113,6 +114,23 @@ export default function SupportQueuePage() {
           }}
           className="flex-1 min-w-56"
         />
+
+        {(status !== "open" ||
+          category !== "all" ||
+          search.trim().length > 0) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setStatus("open");
+              setCategory("all");
+              setSearch("");
+              setPage(1);
+            }}
+          >
+            Clear all
+          </Button>
+        )}
       </Card>
 
       {isLoading ? (
