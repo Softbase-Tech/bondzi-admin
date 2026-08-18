@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { TablePager } from "@/components/admin/shared/table-pager";
 import {
   Select,
   SelectContent,
@@ -65,6 +67,13 @@ import type {
 type VerifiedFilter = "all" | "verified" | "unverified";
 const ANY = "any" as const;
 
+// Level Test (AI) items don't have a `verified` flag — they have a
+// review status (`active` | `pending_review` | `archived`). When the
+// Source filter is set to Level Test the Verification dropdown is
+// repurposed as a Status filter and the value is passed through to
+// the pm_test_questions.status column on the wire.
+const LEVEL_TEST_SOURCE = "ai_passmaster_test" as const;
+
 const YEAR_MIN = 1990;
 const YEAR_MAX = new Date().getFullYear();
 const YEARS: number[] = [];
@@ -81,18 +90,7 @@ interface Filters {
 }
 
 function readFromUrl(p: URLSearchParams | null): Filters {
-  const rawSource = p?.get("source") as QuestionSource | null;
-  // `ai_passmaster_test` is a legitimate DB value BUT it only lives
-  // on `pm_test_questions`, not the `questions` table this page
-  // queries. Bookmarks / stale links carrying that source used to
-  // land the reviewer on a blank result set with no idea why.
-  // Sanitize back to ANY so the page renders content on load — the
-  // "Level Test isn't here" pointer below the results explains where
-  // to actually find those questions.
-  const source: QuestionSource | typeof ANY =
-    rawSource && rawSource !== ("ai_passmaster_test" as QuestionSource)
-      ? rawSource
-      : ANY;
+  const source = (p?.get("source") as QuestionSource | null) ?? ANY;
   return {
     search: p?.get("search") ?? "",
     examType: (p?.get("examType") as ExamType | null) ?? "wassce",
@@ -144,9 +142,34 @@ export default function QuestionsPage() {
       ),
   });
 
+  // Source === Level Test (AI) branches the whole query to a different
+  // backend endpoint. Level Test items live on `pm_test_questions`, not
+  // the past-paper `questions` table — same filter UX, different data
+  // source. The `Verification` dropdown is repurposed as Status while
+  // this branch is active, and Year is dropped (Level Test items have
+  // no exam year).
+  const isLevelTest = filters.source === LEVEL_TEST_SOURCE;
+
   const { data, isLoading } = useQuery({
-    queryKey: QK.QUESTIONS_LIST({ page, limit, ...filters }),
+    queryKey: isLevelTest
+      ? QK.PM_TEST_LIST({ page, limit, ...filters })
+      : QK.QUESTIONS_LIST({ page, limit, ...filters }),
     queryFn: () => {
+      if (isLevelTest) {
+        const qp: Record<string, string | number> = {
+          page,
+          limit,
+          examType: filters.examType,
+        };
+        if (filters.search) qp.search = filters.search;
+        if (filters.subjectId) qp.subjectId = filters.subjectId;
+        if (filters.difficulty !== ANY) qp.difficulty = filters.difficulty;
+        // `verified` slot is re-tasked as Status for Level Test.
+        if (filters.verified !== "all") qp.status = filters.verified;
+        return unwrap<Paginated<Question>>(
+          api.get("/admin/pm-test/list", { params: qp }),
+        );
+      }
       const qp: Record<string, string | number | boolean> = {
         page,
         limit,
@@ -289,12 +312,19 @@ export default function QuestionsPage() {
 
           <FilterField label="Year">
             <Select
-              value={filters.year || ANY}
+              value={isLevelTest ? ANY : filters.year || ANY}
+              disabled={isLevelTest}
               onValueChange={(v) =>
                 apply({ ...filters, year: v === ANY ? "" : v })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger
+                title={
+                  isLevelTest
+                    ? "Level Test items have no exam year — the year filter only applies to past-paper questions."
+                    : undefined
+                }
+              >
                 <SelectValue placeholder="Any" />
               </SelectTrigger>
               <SelectContent className="max-h-72">
@@ -333,12 +363,18 @@ export default function QuestionsPage() {
           <FilterField label="Source">
             <Select
               value={filters.source}
-              onValueChange={(v) =>
+              onValueChange={(v) => {
+                const nextSource = v as QuestionSource | typeof ANY;
+                // Switching in/out of Level Test resets the shared
+                // Verification/Status slot and drops Year — the two
+                // filter models don't line up 1:1.
                 apply({
                   ...filters,
-                  source: v as QuestionSource | typeof ANY,
-                })
-              }
+                  source: nextSource,
+                  verified: "all",
+                  year: nextSource === LEVEL_TEST_SOURCE ? "" : filters.year,
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -347,18 +383,14 @@ export default function QuestionsPage() {
                 <SelectItem value={ANY}>Any source</SelectItem>
                 <SelectItem value="wassce_past">WASSCE past</SelectItem>
                 <SelectItem value="bece_past">BECE past</SelectItem>
-                {/* Level Test (AI) intentionally removed — those
-                    questions live on the pm_test_questions table,
-                    not the past-paper questions table this page
-                    queries. Filtering to `ai_passmaster_test` here
-                    always returned zero rows and made it look like
-                    Level Test content was missing. See the note
-                    below the results table for the real link. */}
+                <SelectItem value={LEVEL_TEST_SOURCE}>
+                  Level Test (AI)
+                </SelectItem>
               </SelectContent>
             </Select>
           </FilterField>
 
-          <FilterField label="Verification">
+          <FilterField label={isLevelTest ? "Status" : "Verification"}>
             <Select
               value={filters.verified}
               onValueChange={(v) =>
@@ -369,9 +401,22 @@ export default function QuestionsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Any status</SelectItem>
-                <SelectItem value="verified">Verified only</SelectItem>
-                <SelectItem value="unverified">Unverified only</SelectItem>
+                {isLevelTest ? (
+                  <>
+                    <SelectItem value="all">Any status</SelectItem>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="pending_review">
+                      Pending review
+                    </SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="all">Any status</SelectItem>
+                    <SelectItem value="verified">Verified only</SelectItem>
+                    <SelectItem value="unverified">Unverified only</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </FilterField>
@@ -416,25 +461,6 @@ export default function QuestionsPage() {
         )}
       </Card>
 
-      {/* Cross-page pointer — Level Test (AI) questions live in a
-          different table from past-paper content and aren't
-          searchable here. Made deliberately visible so a reviewer
-          hunting for AI-generated questions doesn't stare at an
-          empty result set. */}
-      <Card className="border-dashed p-4 bg-slate-900/40">
-        <p className="text-sm text-slate-400">
-          Looking for <strong className="text-slate-200">Level Test
-          (AI)</strong> questions? Those live on the pm_test_questions
-          table, not the past-paper bank.{" "}
-          <Link
-            href="/admin/pm-test/review"
-            className="text-pm-orange underline underline-offset-2"
-          >
-            Open the Level Test review queue →
-          </Link>
-        </p>
-      </Card>
-
       <Card>
         <Table>
           <TableHeader>
@@ -463,7 +489,11 @@ export default function QuestionsPage() {
                   <TableRow key={q.id}>
                     <TableCell className="max-w-md">
                       <Link
-                        href={`/admin/questions/${q.id}`}
+                        href={
+                          isLevelTest
+                            ? "/admin/pm-test/review"
+                            : `/admin/questions/${q.id}`
+                        }
                         className="font-medium text-slate-900 hover:text-primary"
                       >
                         {truncate(q.body, 80)}
@@ -472,15 +502,27 @@ export default function QuestionsPage() {
                     <TableCell className="text-slate-500">
                       {q.subject?.name ?? q.subjectId.slice(0, 8)}
                     </TableCell>
-                    <TableCell>{q.year ?? "—"}</TableCell>
+                    <TableCell>
+                      {isLevelTest ? (
+                        <span className="text-slate-400">—</span>
+                      ) : (
+                        (q.year ?? "—")
+                      )}
+                    </TableCell>
                     <TableCell>
                       <DifficultyBadge value={q.difficulty} />
                     </TableCell>
                     <TableCell>
-                      <VerifiedBadge verified={q.isVerified} />
+                      {isLevelTest ? (
+                        <LevelTestStatusBadge status={q.status} />
+                      ) : (
+                        <VerifiedBadge verified={q.isVerified} />
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {q.flagCount > 0 ? (
+                      {isLevelTest ? (
+                        <span className="text-slate-400">—</span>
+                      ) : q.flagCount > 0 ? (
                         <span className="font-medium text-rose-600">
                           {q.flagCount}
                         </span>
@@ -513,32 +555,23 @@ export default function QuestionsPage() {
         </Table>
       </Card>
 
-      <div className="flex items-center justify-between text-sm text-slate-500">
-        <span>
-          Showing {(data?.items.length ?? 0).toLocaleString()} of{" "}
-          {(data?.total ?? 0).toLocaleString()} questions.
-        </span>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={(data?.items.length ?? 0) < limit}
-            onClick={() => setPage(page + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <TablePager
+        page={page}
+        limit={limit}
+        itemCount={data?.items.length ?? 0}
+        total={data?.total ?? null}
+        onPageChange={setPage}
+      />
     </div>
   );
+}
+
+function LevelTestStatusBadge({ status }: { status: string | undefined }) {
+  if (status === "active") return <Badge variant="success">Live</Badge>;
+  if (status === "pending_review")
+    return <Badge variant="warning">Pending</Badge>;
+  if (status === "archived") return <Badge variant="outline">Archived</Badge>;
+  return <span className="text-slate-400">—</span>;
 }
 
 function FilterField({
