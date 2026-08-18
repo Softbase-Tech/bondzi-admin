@@ -104,6 +104,24 @@ export default function SyllabusReviewPage() {
     onError: (e: { message?: string }) => toast.error(e.message ?? "Embed failed"),
   });
 
+  const approveAll = useMutation({
+    // Scoped to the current subject filter — "Approve all" clears the draft
+    // queue you're looking at. With "All subjects" selected it approves every
+    // draft.
+    mutationFn: () =>
+      unwrap<{ approved: number }>(
+        api.post("/admin/syllabus/approve-all", {
+          subjectId: subjectId === ALL ? undefined : subjectId,
+        }),
+      ),
+    onSuccess: (r) => {
+      toast.success(`Approved ${r.approved} indicators`);
+      invalidate();
+    },
+    onError: (e: { message?: string }) =>
+      toast.error(e.message ?? "Approve failed"),
+  });
+
   const total = list.data?.total ?? 0;
 
   return (
@@ -117,13 +135,35 @@ export default function SyllabusReviewPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center justify-between">
             <span>Indicators {total > 0 ? `(${total})` : ""}</span>
-            <Button
-              size="sm"
-              loading={embed.isPending}
-              onClick={() => embed.mutate()}
-            >
-              Embed approved
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                loading={approveAll.isPending}
+                onClick={() => {
+                  const scope =
+                    subjectId === ALL
+                      ? "ALL subjects"
+                      : (subjectName.get(subjectId) ?? "this subject");
+                  if (
+                    window.confirm(
+                      `Approve all draft indicators for ${scope}? Approved indicators become eligible for embedding.`,
+                    )
+                  ) {
+                    approveAll.mutate();
+                  }
+                }}
+              >
+                Approve all
+              </Button>
+              <Button
+                size="sm"
+                loading={embed.isPending}
+                onClick={() => embed.mutate()}
+              >
+                Embed approved
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
