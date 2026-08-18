@@ -50,6 +50,7 @@ export default function SyllabusReviewPage() {
   const qc = useQueryClient();
   const [subjectId, setSubjectId] = useState<string>(ALL);
   const [status, setStatus] = useState<string>("draft");
+  const [embedded, setEmbedded] = useState<string>(ALL);
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<SyllabusIndicatorRow | null>(null);
 
@@ -69,8 +70,9 @@ export default function SyllabusReviewPage() {
       limit: PAGE_SIZE,
       status: status === ALL ? undefined : status,
       subjectId: subjectId === ALL ? undefined : subjectId,
+      embedded: embedded === ALL ? undefined : embedded === "true",
     }),
-    [offset, status, subjectId],
+    [offset, status, subjectId, embedded],
   );
 
   const list = useQuery({
@@ -96,9 +98,20 @@ export default function SyllabusReviewPage() {
 
   const embed = useMutation({
     mutationFn: () =>
-      unwrap<{ embedded: number }>(api.post("/admin/syllabus/embed", {})),
+      unwrap<{ started: boolean; alreadyRunning: boolean; pending: number }>(
+        api.post("/admin/syllabus/embed", {}),
+      ),
     onSuccess: (r) => {
-      toast.success(`Embedded ${r.embedded} indicators`);
+      // Embedding runs in the background now — the request returns immediately.
+      if (r.alreadyRunning) {
+        toast(`Embedding already running (${r.pending} pending)`);
+      } else if (r.started) {
+        toast.success(
+          `Embedding started for ${r.pending} indicators — refresh to watch progress`,
+        );
+      } else {
+        toast("Nothing to embed — all approved indicators are up to date");
+      }
       invalidate();
     },
     onError: (e: { message?: string }) => toast.error(e.message ?? "Embed failed"),
@@ -201,6 +214,22 @@ export default function SyllabusReviewPage() {
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value={ALL}>All</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={embedded}
+              onValueChange={(v) => {
+                setEmbedded(v);
+                setOffset(0);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Any embedding</SelectItem>
+                <SelectItem value="true">Embedded</SelectItem>
+                <SelectItem value="false">Not embedded</SelectItem>
               </SelectContent>
             </Select>
           </div>
