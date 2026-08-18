@@ -39,6 +39,7 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import { UserEntitlementsSection } from "@/components/admin/users/user-entitlements-section";
 import { SendPushSheet } from "@/components/admin/users/send-push-sheet";
+import { EditContactSheet } from "@/components/admin/users/edit-contact-sheet";
 import type {
   AdminUserExamRow,
   Paginated,
@@ -148,16 +149,30 @@ export default function UserDetailPage({
               </span>
             )}
             <div className="flex items-center gap-2 text-slate-500">
-              {user.email && (
+              {user.email ? (
                 <span className="flex items-center gap-1 text-xs">
                   <Mail className="h-3 w-3" /> {user.email}
                 </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-slate-400">
+                  <Mail className="h-3 w-3" /> no email
+                </span>
               )}
-              {user.phone && (
+              {user.phone ? (
                 <span className="flex items-center gap-1 text-xs">
                   <Phone className="h-3 w-3" /> {user.phone}
                 </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-slate-400">
+                  <Phone className="h-3 w-3" /> no phone
+                </span>
               )}
+              <EditContactSheet
+                userId={user.id}
+                recipientName={user.fullName}
+                initialEmail={user.email}
+                initialPhone={user.phone}
+              />
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="capitalize">
