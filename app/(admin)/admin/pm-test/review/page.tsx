@@ -88,10 +88,19 @@ export default function PmTestReviewPage() {
       ),
   });
 
+  // Stats endpoint isn't implemented on the backend yet (admin-pm-test
+  // service exposes preview/generate/listReview/bulkReview/publish/archive
+  // and nothing else). Silence the 404 spam instead of firing a bad
+  // request every 30 seconds — the three cards fall back to a
+  // best-effort derived count using the paginated list total below.
+  //
+  // When backend adds GET /admin/pm-test/review/stats, drop the
+  // `enabled: false` and delete the fallback derivation.
   const { data: stats } = useQuery({
     queryKey: QK.PM_TEST_STATS(),
     queryFn: () => unwrap<Stats>(api.get("/admin/pm-test/review/stats")),
     refetchInterval: 30_000,
+    enabled: false,
   });
 
   const { data, isLoading } = useQuery({
@@ -102,11 +111,15 @@ export default function PmTestReviewPage() {
       ),
   });
 
+  // Backend contract: PATCH /admin/pm-test/review/bulk with a single
+  // `{ items: [{ id, action }] }` body. The old
+  // `POST /admin/pm-test/review/bulk-{action}` route never existed on
+  // the server and 404'd on every click.
   const bulkMut = useMutation({
     mutationFn: (action: "approve" | "reject") =>
       unwrap(
-        api.post(`/admin/pm-test/review/bulk-${action}`, {
-          ids: Array.from(selected),
+        api.patch("/admin/pm-test/review/bulk", {
+          items: Array.from(selected).map((id) => ({ id, action })),
         }),
       ),
     onSuccess: (_, action) => {
@@ -118,11 +131,18 @@ export default function PmTestReviewPage() {
       toast.error(e.message ?? "Bulk action failed"),
   });
 
+  // Backend contract: single-row approve is `POST /admin/pm-test/publish/:id`,
+  // single-row reject is `DELETE /admin/pm-test/:id` (archive).
+  // The old `POST /admin/pm-test/review/:id/{approve|reject}` shape
+  // was the "Cannot POST" 404 shown on the UI when the reviewer hit
+  // the green tick / red X.
   const rowMut = useMutation({
-    mutationFn: (args: { id: string; action: "approve" | "reject" }) =>
-      unwrap(
-        api.post(`/admin/pm-test/review/${args.id}/${args.action}`, {}),
-      ),
+    mutationFn: (args: { id: string; action: "approve" | "reject" }) => {
+      if (args.action === "approve") {
+        return unwrap(api.post(`/admin/pm-test/publish/${args.id}`, {}));
+      }
+      return unwrap(api.delete(`/admin/pm-test/${args.id}`));
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pm-test"] });
     },
@@ -130,16 +150,15 @@ export default function PmTestReviewPage() {
       toast.error(e.message ?? "Action failed"),
   });
 
-  const spotCheckMut = useMutation({
-    mutationFn: () =>
-      unwrap<{ ids: string[] }>(
-        api.post("/admin/pm-test/review/spot-check", { examType, percent: 10 }),
-      ),
-    onSuccess: (data) => {
-      setSelected(new Set(data.ids));
-      toast.success(`Spot-check: ${data.ids.length} questions selected`);
-    },
-  });
+  // Spot-check endpoint isn't implemented on the backend yet. Rather
+  // than 404 silently on tap, the button below is disabled with a
+  // tooltip; re-enable it (and drop this stub) when the endpoint
+  // lands.
+  const spotCheckMut = {
+    mutate: () =>
+      toast.error("Spot-check isn't wired to the backend yet."),
+    isPending: false as const,
+  };
 
   const toggleAll = () => {
     if (!data) return;
@@ -177,7 +196,12 @@ export default function PmTestReviewPage() {
         title="Level Test review queue"
         description="AI-generated questions awaiting admin approval before they go live."
         actions={
-          <Button variant="outline" onClick={() => spotCheckMut.mutate()}>
+          <Button
+            variant="outline"
+            disabled
+            title="Spot-check endpoint isn't wired to the backend yet"
+            onClick={() => spotCheckMut.mutate()}
+          >
             <Sparkles className="h-4 w-4" /> Spot-check 10%
           </Button>
         }
@@ -189,12 +213,17 @@ export default function PmTestReviewPage() {
             Pending
           </div>
           <div className="mt-1 text-2xl font-semibold">
-            {stats?.pending === undefined ? (
+            {/* Fallback while GET /admin/pm-test/review/stats is
+                unimplemented: derive from the paginated list total.
+                It counts pending items in the current filter, which
+                matches what the reviewer sees below and is at least
+                truthful. */}
+            {data?.total === undefined ? (
               <Skeleton className="h-7 w-14" />
             ) : (
               <>
-                {formatNumber(stats.pending)}{" "}
-                {stats.pending > 0 && (
+                {formatNumber(stats?.pending ?? data.total)}{" "}
+                {(stats?.pending ?? data.total) > 0 && (
                   <Badge variant="warning" className="ml-2 align-middle">
                     needs review
                   </Badge>
