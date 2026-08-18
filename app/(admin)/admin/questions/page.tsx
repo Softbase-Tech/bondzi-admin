@@ -81,13 +81,25 @@ interface Filters {
 }
 
 function readFromUrl(p: URLSearchParams | null): Filters {
+  const rawSource = p?.get("source") as QuestionSource | null;
+  // `ai_passmaster_test` is a legitimate DB value BUT it only lives
+  // on `pm_test_questions`, not the `questions` table this page
+  // queries. Bookmarks / stale links carrying that source used to
+  // land the reviewer on a blank result set with no idea why.
+  // Sanitize back to ANY so the page renders content on load — the
+  // "Level Test isn't here" pointer below the results explains where
+  // to actually find those questions.
+  const source: QuestionSource | typeof ANY =
+    rawSource && rawSource !== ("ai_passmaster_test" as QuestionSource)
+      ? rawSource
+      : ANY;
   return {
     search: p?.get("search") ?? "",
     examType: (p?.get("examType") as ExamType | null) ?? "wassce",
     subjectId: p?.get("subjectId") ?? "",
     year: p?.get("year") ?? "",
     difficulty: (p?.get("difficulty") as Difficulty | null) ?? ANY,
-    source: (p?.get("source") as QuestionSource | null) ?? ANY,
+    source,
     verified: (p?.get("verified") as VerifiedFilter | null) ?? "all",
   };
 }
@@ -335,9 +347,13 @@ export default function QuestionsPage() {
                 <SelectItem value={ANY}>Any source</SelectItem>
                 <SelectItem value="wassce_past">WASSCE past</SelectItem>
                 <SelectItem value="bece_past">BECE past</SelectItem>
-                <SelectItem value="ai_passmaster_test">
-                  Level Test (AI)
-                </SelectItem>
+                {/* Level Test (AI) intentionally removed — those
+                    questions live on the pm_test_questions table,
+                    not the past-paper questions table this page
+                    queries. Filtering to `ai_passmaster_test` here
+                    always returned zero rows and made it look like
+                    Level Test content was missing. See the note
+                    below the results table for the real link. */}
               </SelectContent>
             </Select>
           </FilterField>
@@ -398,6 +414,25 @@ export default function QuestionsPage() {
             </span>
           </p>
         )}
+      </Card>
+
+      {/* Cross-page pointer — Level Test (AI) questions live in a
+          different table from past-paper content and aren't
+          searchable here. Made deliberately visible so a reviewer
+          hunting for AI-generated questions doesn't stare at an
+          empty result set. */}
+      <Card className="border-dashed p-4 bg-slate-900/40">
+        <p className="text-sm text-slate-400">
+          Looking for <strong className="text-slate-200">Level Test
+          (AI)</strong> questions? Those live on the pm_test_questions
+          table, not the past-paper bank.{" "}
+          <Link
+            href="/admin/pm-test/review"
+            className="text-pm-orange underline underline-offset-2"
+          >
+            Open the Level Test review queue →
+          </Link>
+        </p>
       </Card>
 
       <Card>
