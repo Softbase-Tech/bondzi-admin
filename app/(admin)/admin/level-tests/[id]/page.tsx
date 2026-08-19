@@ -9,12 +9,13 @@ import { ArrowLeft, Check, Copy, Save, Trash2 } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { PageHeader } from "@/components/admin/layout/page-header";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,27 +23,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DifficultyBadge } from "@/components/admin/questions/difficulty-badge";
+import { MathEditor } from "@/components/admin/questions/math-editor";
 import { formatDateTime } from "@/lib/utils";
-import type { Difficulty, PmTestQuestion } from "@/types/api";
+import type {
+  Difficulty,
+  PmTestQuestion,
+  Subject,
+  SyllabusTopic,
+} from "@/types/api";
 
 /**
  * Level Test question detail + edit page.
  *
- * Read-side: full stem, options, explanation, syllabus topic, batch
- * provenance. Everything the reviewer needs to decide "publish this".
+ * Mirrors the Question bank detail layout so admins moving between
+ * past-paper and Level Test items don't have to relearn the interface.
+ * Same shell — 3-column Question body / 2-column Metadata / bottom
+ * AI Explanation section.
  *
- * Write-side: surgical PATCH. Only the fields the reviewer changed
- * ship — the "options" array is all-or-nothing (replace the whole
- * set) because a partial option edit would break the answer-key
- * invariant. The backend enforces one-correct + 4-unique-labels +
- * 4-unique-bodies before writing.
- *
- * Actions bar: Publish, Archive, Delete (destructive), Copy id, Back.
- * Publish is idempotent (no-op if already active), Archive flips to
- * archived without deleting, Delete is a hard remove — different from
- * archive because a mis-generated row an admin never wants to see
- * again shouldn't clutter Archive filters.
+ * What differs from Question bank:
+ *   • No Year / Paper / Source / Image URL / Shared stimulus —
+ *     Level Test items aren't dated exam papers.
+ *   • No Add / Delete on options — WAEC MCQ shape is exactly 4 and
+ *     the answer-key invariant is enforced server-side.
+ *   • Metadata card carries Exam type / Subject / Form level as
+ *     read-only fields (they're structural properties of the
+ *     generated row, not admin-mutable), plus editable Topic and
+ *     Difficulty dropdowns.
+ *   • AI Explanation section shows the current explanation with the
+ *     same Markdown + LaTeX helper the QB uses; the generation
+ *     provenance line reads "generated inline at batch creation"
+ *     rather than the eu.anthropic model label because pm_test rows
+ *     don't carry an `explanation_model` column.
  */
 export default function LevelTestDetailPage() {
   const params = useParams<{ id: string }>();
@@ -57,14 +68,37 @@ export default function LevelTestDetailPage() {
     enabled: Boolean(id),
   });
 
+  const topicsQ = useQuery({
+    queryKey: QK.SYLLABUS_TOPICS({
+      examType: data?.examType,
+      subjectId: data?.subjectId,
+      formLevel: data?.formLevel,
+    }),
+    queryFn: () =>
+      unwrap<SyllabusTopic[]>(
+        api.get("/syllabus-topics", {
+          params: {
+            examType: data?.examType,
+            subjectId: data?.subjectId,
+            formLevel: data?.formLevel,
+          },
+        }),
+      ),
+    enabled: Boolean(data?.subjectId),
+  });
+
+  const subjectQ = useQuery({
+    queryKey: QK.SUBJECTS_LIST({ examType: data?.examType }),
+    queryFn: () =>
+      unwrap<Subject[]>(
+        api.get("/subjects", { params: { examType: data?.examType } }),
+      ),
+    enabled: Boolean(data?.examType),
+  });
+
   const [draft, setDraft] = useState<Draft | null>(null);
   useEffect(() => {
-    if (data && !draft) {
-      // Seed once when data first arrives. Subsequent refetches
-      // (invalidations) don't overwrite an in-progress edit — that
-      // would silently drop the reviewer's typing.
-      setDraft(toDraft(data));
-    }
+    if (data && !draft) setDraft(toDraft(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
@@ -125,22 +159,30 @@ export default function LevelTestDetailPage() {
   if (isError)
     return (
       <div className="p-6 text-sm text-rose-700">
-        Question not found. <Link href="/admin/level-tests">Back to list</Link>
+        Question not found.{" "}
+        <Link href="/admin/level-tests" className="underline">
+          Back to list
+        </Link>
       </div>
     );
   if (isLoading || !data || !draft)
     return (
-      <div className="p-6">
-        <Skeleton className="h-6 w-40 mb-4" />
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-6 w-40" />
         <Skeleton className="h-40 w-full" />
       </div>
     );
 
+  const subjectName =
+    data.subject?.name ??
+    subjectQ.data?.find((s) => s.id === data.subjectId)?.name ??
+    data.subjectId.slice(0, 8);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Level Test question"
-        description={`Batch ${data.generationBatchId ? data.generationBatchId.slice(0, 8) : "manual"} · ${formatDateTime(data.createdAt)}`}
+        title="Edit Level Test question"
+        description={`Changes are audit-logged. Batch ${data.generationBatchId ? data.generationBatchId.slice(0, 8) : "manual"} · ${formatDateTime(data.createdAt)}`}
         actions={
           <>
             <Button variant="outline" onClick={() => router.back()}>
@@ -182,164 +224,253 @@ export default function LevelTestDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="p-4 lg:col-span-2 space-y-4">
-          <div className="flex items-center gap-3">
-            <DifficultyBadge value={draft.difficulty} />
-            <StatusBadge status={data.status} />
-            <span className="text-xs text-slate-500">
-              F{data.formLevel} · {data.subject?.name ?? data.subjectId.slice(0, 6)} ·{" "}
-              {data.examType.toUpperCase()}
-            </span>
-          </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (dirty) saveMut.mutate();
+        }}
+        className="grid grid-cols-1 lg:grid-cols-5 gap-6"
+      >
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Question body</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <StatusBadge status={data.status} />
+              <span className="text-xs text-slate-500">
+                F{data.formLevel} · {subjectName} ·{" "}
+                {data.examType.toUpperCase()}
+              </span>
+            </div>
 
-          <FieldLabel>Question stem</FieldLabel>
-          <Textarea
-            value={draft.body}
-            onChange={(e) =>
-              setDraft((d) => (d ? { ...d, body: e.target.value } : d))
-            }
-            rows={4}
-            placeholder="The full question text students see."
-          />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="body">Question (Markdown + LaTeX math)</Label>
+              <MathEditor
+                id="body"
+                value={draft.body}
+                onChange={(v) =>
+                  setDraft((d) => (d ? { ...d, body: v } : d))
+                }
+                rows={6}
+                placeholder="State the full question as students will see it. Wrap math in $…$ — e.g. Simplify $\dfrac{5^7 \times 5^4}{5^2}$"
+              />
+            </div>
 
-          <div className="space-y-3">
-            <FieldLabel>Options — mark exactly one as correct</FieldLabel>
-            {draft.options.map((opt, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="flex flex-col items-center gap-1 pt-2">
-                  <span className="w-6 text-center font-nunito-bold text-slate-500">
-                    {opt.label}
-                  </span>
-                  <input
-                    type="radio"
-                    name="correct"
-                    checked={opt.isCorrect}
-                    onChange={() =>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label>Options — mark exactly one as correct</Label>
+                <span className="text-xs text-slate-500">
+                  WAEC MCQ shape is fixed at 4 options
+                </span>
+              </div>
+              {draft.options.map((opt, i) => (
+                <div
+                  key={i}
+                  className={
+                    "flex flex-col gap-2 rounded-md border p-2 " +
+                    (opt.isCorrect
+                      ? "border-emerald-300 bg-emerald-50/40"
+                      : "border-slate-200 bg-slate-50")
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="w-12 text-center uppercase"
+                      value={opt.label}
+                      readOnly
+                    />
+                    <label className="flex items-center gap-1 whitespace-nowrap text-xs text-slate-600">
+                      <Checkbox
+                        checked={opt.isCorrect}
+                        onCheckedChange={(v) => {
+                          const next = v === true;
+                          setDraft((d) =>
+                            d
+                              ? {
+                                  ...d,
+                                  options: d.options.map((o, j) =>
+                                    j === i
+                                      ? { ...o, isCorrect: next }
+                                      : next
+                                        ? { ...o, isCorrect: false }
+                                        : o,
+                                  ),
+                                }
+                              : d,
+                          );
+                        }}
+                      />
+                      Correct
+                    </label>
+                  </div>
+                  <MathEditor
+                    compact
+                    value={opt.body}
+                    onChange={(v) =>
                       setDraft((d) =>
                         d
                           ? {
                               ...d,
-                              options: d.options.map((o, j) => ({
-                                ...o,
-                                isCorrect: j === i,
-                              })),
+                              options: d.options.map((o, j) =>
+                                j === i ? { ...o, body: v } : o,
+                              ),
                             }
                           : d,
                       )
                     }
-                    aria-label={`Mark option ${opt.label} correct`}
-                    className="h-4 w-4 accent-emerald-600"
+                    placeholder={`Option ${opt.label} body — wrap math in $…$`}
                   />
                 </div>
-                <Textarea
-                  value={opt.body}
-                  onChange={(e) =>
-                    setDraft((d) =>
-                      d
-                        ? {
-                            ...d,
-                            options: d.options.map((o, j) =>
-                              j === i ? { ...o, body: e.target.value } : o,
-                            ),
-                          }
-                        : d,
-                    )
-                  }
-                  rows={2}
-                  className={
-                    opt.isCorrect
-                      ? "border-emerald-300 bg-emerald-50/30"
-                      : undefined
-                  }
-                />
-              </div>
-            ))}
-          </div>
-
-          <FieldLabel>Explanation</FieldLabel>
-          <Textarea
-            value={draft.explanation}
-            onChange={(e) =>
-              setDraft((d) =>
-                d ? { ...d, explanation: e.target.value } : d,
-              )
-            }
-            rows={6}
-            placeholder="Why the correct answer is right. Shown to students after they answer."
-          />
+              ))}
+            </div>
+          </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <Card className="p-4 space-y-3">
-            <FieldLabel>Difficulty</FieldLabel>
-            <Select
-              value={draft.difficulty}
-              onValueChange={(v) =>
-                setDraft((d) =>
-                  d ? { ...d, difficulty: v as Difficulty } : d,
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="easy">Easy</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="hard">Hard</SelectItem>
-              </SelectContent>
-            </Select>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Metadata</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Exam type</Label>
+                <Input value={data.examType.toUpperCase()} readOnly />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Form level</Label>
+                <Input value={`Form ${data.formLevel}`} readOnly />
+              </div>
+            </div>
 
-            <FieldLabel>Syllabus topic id</FieldLabel>
-            <Input
-              value={draft.syllabusTopicId ?? ""}
-              onChange={(e) =>
-                setDraft((d) =>
-                  d
-                    ? {
-                        ...d,
-                        syllabusTopicId: e.target.value.trim() || null,
-                      }
-                    : d,
-                )
+            <div className="flex flex-col gap-1.5">
+              <Label>Subject</Label>
+              <Input value={subjectName} readOnly />
+              <p className="text-[11px] text-slate-500">
+                Exam type / subject / form are set at generation and can&apos;t
+                be edited here. Archive and regenerate to change them.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Syllabus topic</Label>
+                {draft.syllabusTopicId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraft((d) =>
+                        d ? { ...d, syllabusTopicId: null } : d,
+                      )
+                    }
+                    className="text-xs text-pm-orange hover:underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <Select
+                value={draft.syllabusTopicId ?? "none"}
+                onValueChange={(v) =>
+                  setDraft((d) =>
+                    d
+                      ? { ...d, syllabusTopicId: v === "none" ? null : v }
+                      : d,
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No topic" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="none">No topic</SelectItem>
+                  {(topicsQ.data ?? []).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {draft.syllabusTopicId ? (
+                <p className="font-mono text-[11px] text-slate-500">
+                  {draft.syllabusTopicId}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Difficulty</Label>
+              <Select
+                value={draft.difficulty}
+                onValueChange={(v) =>
+                  setDraft((d) =>
+                    d ? { ...d, difficulty: v as Difficulty } : d,
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 space-y-1">
+              <div className="font-semibold uppercase tracking-wide text-slate-500">
+                Provenance
+              </div>
+              <div>
+                <span className="text-slate-500">Batch:</span>{" "}
+                <span className="font-mono">
+                  {data.generationBatchId ?? "manual upload"}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500">Created:</span>{" "}
+                {formatDateTime(data.createdAt)}
+              </div>
+              <div>
+                <span className="text-slate-500">Answered:</span>{" "}
+                {data.timesAnswered.toLocaleString()} times
+                {data.timesAnswered > 0 && (
+                  <>
+                    {" · "}
+                    {Math.round(
+                      (data.timesCorrect / data.timesAnswered) * 100,
+                    )}
+                    % accuracy
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-5">
+          <CardHeader>
+            <CardTitle>AI Explanation</CardTitle>
+            <p className="text-xs text-slate-500">
+              Markdown, `$…$` LaTeX allowed. Explanations are generated
+              inline at batch creation; edit here to correct or expand
+              on the AI&apos;s rationale.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <MathEditor
+              value={draft.explanation}
+              onChange={(v) =>
+                setDraft((d) => (d ? { ...d, explanation: v } : d))
               }
-              placeholder="uuid (or empty)"
-              className="font-mono text-xs"
+              rows={10}
+              placeholder="Why the correct answer is right. Walk through the reasoning; call out the specific concept in play; briefly note why each distractor is wrong."
             />
-          </Card>
-
-          <Card className="p-4 space-y-2 text-xs text-slate-500">
-            <div className="font-semibold uppercase tracking-wide text-slate-500">
-              Provenance
-            </div>
-            <div>
-              <span className="text-slate-500">Batch:</span>{" "}
-              <span className="font-mono">
-                {data.generationBatchId ?? "manual upload"}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-500">Created:</span>{" "}
-              {formatDateTime(data.createdAt)}
-            </div>
-            <div>
-              <span className="text-slate-500">Answered:</span>{" "}
-              {data.timesAnswered.toLocaleString()} times
-              {data.timesAnswered > 0 && (
-                <>
-                  {" "}
-                  ·{" "}
-                  {Math.round(
-                    (data.timesCorrect / data.timesAnswered) * 100,
-                  )}
-                  % accuracy
-                </>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }
@@ -362,11 +493,7 @@ function toDraft(q: PmTestQuestion): Draft {
   const labels = ["A", "B", "C", "D"];
   const options = labels.map((l) => {
     const o = byLabel.get(l);
-    return {
-      label: l,
-      body: o?.body ?? "",
-      isCorrect: !!o?.isCorrect,
-    };
+    return { label: l, body: o?.body ?? "", isCorrect: !!o?.isCorrect };
   });
   return {
     body: q.body,
@@ -392,11 +519,6 @@ function draftDirty(orig: PmTestQuestion, draft: Draft): boolean {
   return false;
 }
 
-/**
- * Only send the fields the reviewer actually changed. Options are
- * all-or-nothing (backend enforces one-correct + 4-unique-labels);
- * everything else is a scalar field.
- */
 function diffPayload(orig: PmTestQuestion, draft: Draft) {
   const out: Record<string, unknown> = {};
   if (draft.body !== orig.body) out.body = draft.body;
@@ -405,7 +527,6 @@ function diffPayload(orig: PmTestQuestion, draft: Draft) {
   if (draft.difficulty !== orig.difficulty) out.difficulty = draft.difficulty;
   if ((draft.syllabusTopicId ?? null) !== (orig.syllabusTopicId ?? null))
     out.syllabusTopicId = draft.syllabusTopicId;
-  // Options: any per-cell change ships the whole array.
   const origMap = new Map(orig.options.map((o) => [o.label, o]));
   const optionsDirty = draft.options.some((d) => {
     const o = origMap.get(d.label);
@@ -413,14 +534,6 @@ function diffPayload(orig: PmTestQuestion, draft: Draft) {
   });
   if (optionsDirty) out.options = draft.options;
   return out;
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-      {children}
-    </div>
-  );
 }
 
 function StatusBadge({ status }: { status: string }) {
