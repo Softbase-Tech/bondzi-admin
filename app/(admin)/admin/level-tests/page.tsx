@@ -264,15 +264,40 @@ export default function LevelTestsPage() {
     bulkMut.mutate(action);
   };
 
-  const buildExportUrl = () => {
-    const usp = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (key === "page" || key === "limit") return;
-      if (value === undefined || value === null || value === "") return;
-      usp.set(key, String(value));
-    });
-    return `/admin/pm-test/export.csv?${usp.toString()}`;
-  };
+  // Export must go through the axios API client so the Bearer token
+  // is attached — a plain `<a href download>` opens the URL as a
+  // browser navigation, which sends no Authorization header, so the
+  // backend returned 401. Fetch as blob → synthesize an anchor click
+  // → revoke the object URL.
+  const exportMut = useMutation({
+    mutationFn: async () => {
+      const exportParams: Record<string, string | number> = {};
+      Object.entries(params).forEach(([key, value]) => {
+        if (key === "page" || key === "limit") return;
+        if (value === undefined || value === null || value === "") return;
+        exportParams[key] =
+          typeof value === "boolean" ? String(value) : (value as string | number);
+      });
+      const res = await api.get<Blob>("/admin/pm-test/export.csv", {
+        params: exportParams,
+        responseType: "blob",
+      });
+      return res.data;
+    },
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `level-tests-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("CSV downloaded");
+    },
+    onError: (e: { message?: string }) =>
+      toast.error(e.message ?? "Export failed"),
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -282,13 +307,12 @@ export default function LevelTestsPage() {
         actions={
           <>
             <Button
-              asChild
               variant="outline"
+              onClick={() => exportMut.mutate()}
+              loading={exportMut.isPending}
               title="Download the current filter set as CSV (max 5000 rows)"
             >
-              <a href={api.defaults.baseURL + buildExportUrl()} download>
-                <Download className="h-4 w-4" /> Export CSV
-              </a>
+              <Download className="h-4 w-4" /> Export CSV
             </Button>
             <Button asChild>
               <Link href="/admin/level-tests/import">
