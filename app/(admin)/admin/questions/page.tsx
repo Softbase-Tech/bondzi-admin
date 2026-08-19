@@ -1,10 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Filter, Plus, Search, Upload, X } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+  BadgeCheck,
+  Check,
+  Filter,
+  Plus,
+  Search,
+  Upload,
+  X,
+} from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { usePagination } from "@/hooks/use-pagination";
@@ -12,6 +21,7 @@ import { PageHeader } from "@/components/admin/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TablePager } from "@/components/admin/shared/table-pager";
 import {
@@ -123,6 +133,11 @@ export default function QuestionsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const qc = useQueryClient();
+  // Per-page multi-select for the "Verify selected" action. Cleared
+  // on filter change so a stale selection from another view can't
+  // silently ship on the next click.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Filters: derived from the URL on every render. Single source of
   // truth — the URL — drives the query, so this component never
@@ -184,6 +199,91 @@ export default function QuestionsPage() {
   const onSubmitSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     apply({ ...filters, search: searchDraft });
+  };
+
+  // Selection is per-view — clear it whenever the underlying filter
+  // (or exam type, or search) changes, so a stale pick from another
+  // subject can't be verified by mistake on the next click.
+  useEffect(() => {
+    setSelected(new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    filters.examType,
+    filters.subjectId,
+    filters.year,
+    filters.difficulty,
+    filters.source,
+    filters.verified,
+    filters.search,
+    page,
+  ]);
+
+  const verifyBulkMut = useMutation({
+    mutationFn: (ids: string[]) =>
+      unwrap<{ verified: number }>(
+        api.post("/questions/verify/bulk", { ids }),
+      ),
+    onSuccess: (res) => {
+      toast.success(`Verified ${res.verified} question${res.verified === 1 ? "" : "s"}`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["questions"] });
+    },
+    onError: (e: { message?: string }) =>
+      toast.error(e.message ?? "Verify failed"),
+  });
+
+  const verifyAllMatchingMut = useMutation({
+    mutationFn: () => {
+      const body: Record<string, unknown> = { examType: filters.examType };
+      if (filters.search) body.search = filters.search;
+      if (filters.subjectId) body.subjectId = filters.subjectId;
+      if (filters.year) body.year = filters.year;
+      if (filters.difficulty !== ANY) body.difficulty = filters.difficulty;
+      if (filters.source !== ANY) body.source = filters.source;
+      return unwrap<{ verified: number }>(
+        api.post("/questions/verify/all-matching", body),
+      );
+    },
+    onSuccess: (res) => {
+      toast.success(
+        `Verified ${res.verified} unverified question${res.verified === 1 ? "" : "s"} matching the current filters`,
+      );
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["questions"] });
+    },
+    onError: (e: { message?: string }) =>
+      toast.error(e.message ?? "Verify failed"),
+  });
+
+  const items = data?.items ?? [];
+  const unverifiedOnPage = items.filter((q) => !q.isVerified);
+  const allUnverifiedSelected =
+    unverifiedOnPage.length > 0 &&
+    unverifiedOnPage.every((q) => selected.has(q.id));
+  const toggleAllUnverified = () => {
+    if (allUnverifiedSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(unverifiedOnPage.map((q) => q.id)));
+    }
+  };
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const confirmVerifyAllMatching = () => {
+    if (
+      !window.confirm(
+        "Mark EVERY unverified question matching the current filters as verified? This runs across all pages, not just the ones on screen.",
+      )
+    )
+      return;
+    verifyAllMatchingMut.mutate();
   };
 
   const clearAll = () => {
@@ -411,12 +511,71 @@ export default function QuestionsPage() {
             </span>
           </p>
         )}
+
+        {/* Bulk verify controls — appear when there's something to
+            verify. Two shapes: the "selected on this page" bar shows
+            up once the admin ticks any row; the "all unverified
+            matching filter" button is always available under the
+            filter card while the current view has anything at all,
+            because it operates across pagination. */}
+        {selected.size > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50/40 px-3 py-2">
+            <span className="text-sm text-slate-700">
+              {selected.size} selected on this page
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-emerald-700"
+              onClick={() => verifyBulkMut.mutate(Array.from(selected))}
+              loading={verifyBulkMut.isPending}
+            >
+              <Check className="h-4 w-4" /> Verify {selected.size}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(new Set())}
+              className="ml-auto"
+            >
+              Clear selection
+            </Button>
+          </div>
+        ) : null}
+
+        {unverifiedOnPage.length > 0 || filters.verified === "unverified" ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <span>
+              {filters.verified === "unverified"
+                ? "Filtered to unverified — the button below verifies every match across all pages."
+                : `${unverifiedOnPage.length} of ${items.length} rows on this page are unverified.`}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-emerald-700"
+              onClick={confirmVerifyAllMatching}
+              loading={verifyAllMatchingMut.isPending}
+            >
+              <BadgeCheck className="h-4 w-4" /> Verify all unverified matching
+              filters
+            </Button>
+          </div>
+        ) : null}
       </Card>
 
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8">
+                <Checkbox
+                  checked={allUnverifiedSelected}
+                  onCheckedChange={toggleAllUnverified}
+                  aria-label="Select all unverified on this page"
+                  title="Select all unverified on this page"
+                />
+              </TableHead>
               <TableHead>Question</TableHead>
               <TableHead>Subject</TableHead>
               <TableHead>Year</TableHead>
@@ -432,13 +591,24 @@ export default function QuestionsPage() {
             {isLoading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
-              : (data?.items ?? []).map((q) => (
+              : items.map((q) => (
                   <TableRow key={q.id}>
+                    <TableCell>
+                      {q.isVerified ? (
+                        <span className="inline-block w-4" aria-hidden />
+                      ) : (
+                        <Checkbox
+                          checked={selected.has(q.id)}
+                          onCheckedChange={() => toggleOne(q.id)}
+                          aria-label={`Select question ${q.id.slice(0, 8)}`}
+                        />
+                      )}
+                    </TableCell>
                     <TableCell className="max-w-md">
                       <Link
                         href={`/admin/questions/${q.id}`}
@@ -477,10 +647,10 @@ export default function QuestionsPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-            {!isLoading && (data?.items.length ?? 0) === 0 && (
+            {!isLoading && items.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="py-12 text-center text-slate-500"
                 >
                   No questions match your filters.
