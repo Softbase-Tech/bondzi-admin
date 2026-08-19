@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { ArrowLeft, Check, Copy, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Save, Sparkles, Trash2 } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { PageHeader } from "@/components/admin/layout/page-header";
@@ -134,6 +134,27 @@ export default function LevelTestDetailPage() {
     },
     onError: (e: { message?: string }) =>
       toast.error(e.message ?? "Publish failed"),
+  });
+
+  // Synchronous regenerate — the backend takes one Bedrock round-trip
+  // (~10s on Haiku, ~30s on Sonnet) and writes the new explanation
+  // straight to the row. The mutation replaces the draft's
+  // explanation with the fresh text so the reviewer sees the change
+  // immediately and can further edit if they want.
+  const regenerateMut = useMutation({
+    mutationFn: (model: "claude-haiku" | "claude-sonnet") =>
+      unwrap<PmTestQuestion>(
+        api.post(`/admin/pm-test/${id}/regenerate-explanation`, { model }),
+      ),
+    onSuccess: (fresh) => {
+      toast.success("Explanation regenerated");
+      setDraft((d) =>
+        d ? { ...d, explanation: fresh.explanation ?? "" } : d,
+      );
+      invalidate();
+    },
+    onError: (e: { message?: string }) =>
+      toast.error(e.message ?? "Regenerate failed"),
   });
 
   const archiveMut = useMutation({
@@ -451,13 +472,34 @@ export default function LevelTestDetailPage() {
         </Card>
 
         <Card className="lg:col-span-5">
-          <CardHeader>
-            <CardTitle>AI Explanation</CardTitle>
-            <p className="text-xs text-slate-500">
-              Markdown, `$…$` LaTeX allowed. Explanations are generated
-              inline at batch creation; edit here to correct or expand
-              on the AI&apos;s rationale.
-            </p>
+          <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <div className="flex-1">
+              <CardTitle>AI Explanation</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">
+                Markdown, `$…$` LaTeX allowed. Regenerate to overwrite with
+                a fresh AI pass, or edit the text below manually.
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                loading={regenerateMut.isPending}
+                onClick={() => regenerateMut.mutate("claude-haiku")}
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Regenerate (Haiku)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                loading={regenerateMut.isPending}
+                onClick={() => regenerateMut.mutate("claude-sonnet")}
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Regenerate (Sonnet)
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <MathEditor
