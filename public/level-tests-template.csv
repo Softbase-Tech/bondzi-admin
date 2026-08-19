@@ -1,0 +1,3 @@
+subject_code,form_level,exam_type,difficulty,body,option_a,option_b,option_c,option_d,correct_letter,explanation,syllabus_topic_id
+CHEM,2,wassce,medium,"What is the SI unit of the amount of a substance?",Kilogram,Mole,Ampere,Kelvin,B,"The mole is one of the seven SI base units. It measures amount of substance, not mass (kilogram) or current (ampere).",
+BIO,3,wassce,easy,"Which organelle is primarily responsible for ATP synthesis in eukaryotic cells?","Nucleus","Mitochondrion","Ribosome","Golgi apparatus",B,"Mitochondria produce most of the cell's ATP via oxidative phosphorylation. The nucleus stores DNA, ribosomes translate proteins, and the Golgi packages them.",

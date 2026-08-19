@@ -58,6 +58,7 @@ export const QK = {
     ["pm-test", "review", filters] as const,
   PM_TEST_LIST: (filters: Record<string, unknown>) =>
     ["pm-test", "list", filters] as const,
+  PM_TEST_DETAIL: (id: string) => ["pm-test", "detail", id] as const,
   PM_TEST_STATS: () => ["pm-test", "stats"] as const,
 
   // Payments

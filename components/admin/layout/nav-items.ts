@@ -73,6 +73,11 @@ export const NAV_GROUPS: NavGroup[] = [
         badgeKey: "questions",
       },
       {
+        href: "/admin/level-tests",
+        label: "Level Test bank",
+        icon: Sparkles,
+      },
+      {
         href: "/admin/stimuli",
         label: "Shared stimuli",
         icon: FileStack,
