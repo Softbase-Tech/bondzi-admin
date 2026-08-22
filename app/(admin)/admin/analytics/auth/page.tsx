@@ -2,6 +2,16 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { PageHeader } from "@/components/admin/layout/page-header";
@@ -70,9 +80,7 @@ export default function AuthAnalyticsPage() {
     staleTime: 60_000,
   });
 
-  const dailySeries = useMemo(() => (data ? buildDailySeries(data) : null), [
-    data,
-  ]);
+  const daily = useMemo(() => (data ? buildDaily(data) : null), [data]);
 
   if (isLoading || !data) {
     return (
@@ -161,10 +169,68 @@ export default function AuthAnalyticsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Daily sign-ins, last 30 days</CardTitle>
+          <p className="text-xs text-slate-500">
+            Every real sign-in — register, password login, Google, or
+            OTP — stacked by platform. Refresh-token rotations excluded.
+          </p>
         </CardHeader>
         <CardContent>
-          {dailySeries && dailySeries.days.length > 0 ? (
-            <DailyChart series={dailySeries} />
+          {daily && daily.rows.some((r) => Number(r.total) > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={daily.rows}
+                margin={{ top: 10, right: 12, bottom: 4, left: -12 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  tickFormatter={shortDate}
+                  minTickGap={24}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  width={36}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 6,
+                    border: "1px solid #e2e8f0",
+                    fontSize: 12,
+                  }}
+                  labelFormatter={(v) =>
+                    new Date(`${v}T00:00:00Z`).toLocaleDateString("en-GB", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })
+                  }
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                  iconType="square"
+                />
+                {daily.platforms.map((p) => (
+                  <Bar
+                    key={p ?? "__null"}
+                    dataKey={p ?? "__null"}
+                    name={platformLabel(p)}
+                    stackId="signins"
+                    fill={hexFor(p)}
+                    radius={
+                      p === daily.platforms[daily.platforms.length - 1]
+                        ? [3, 3, 0, 0]
+                        : [0, 0, 0, 0]
+                    }
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
             <p className="py-8 text-center text-sm text-slate-500">
               No sign-in events recorded in the last 30 days.
@@ -174,6 +240,20 @@ export default function AuthAnalyticsPage() {
       </Card>
     </div>
   );
+}
+
+function shortDate(v: string): string {
+  const d = new Date(`${v}T00:00:00Z`);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+function hexFor(platform: string | null): string {
+  const key = (platform ?? "").toLowerCase();
+  if (key === "web") return "#6366f1"; // indigo-500
+  if (key === "ios") return "#1e293b"; // slate-800
+  if (key === "android") return "#10b981"; // emerald-500
+  if (key === "admin-web") return "#f59e0b"; // amber-500
+  return "#cbd5e1"; // slate-300 — Unknown bucket
 }
 
 function PlatformBreakdownCard({
@@ -301,123 +381,49 @@ function buildPlatformEventMatrix(
   return Array.from(map.values()).sort((a, b) => b.total - a.total);
 }
 
-interface DailySeries {
-  days: string[];
+/**
+ * Shape the backend's sparse `dailyLast30d` array into a dense row
+ * per day, one column per platform — the exact shape recharts wants
+ * for a stacked BarChart. Zero-fills every missing (day, platform)
+ * pair so the x-axis is continuous even when a platform has quiet
+ * days. Platform order is `PLATFORM_ORDER` filtered to what actually
+ * appears in the data, so the stack is stable across renders.
+ */
+interface DailyChartData {
+  rows: Array<Record<string, string | number>>;
   platforms: (string | null)[];
-  // counts[platformKey][dayIndex]
-  counts: Record<string, number[]>;
-  maxCount: number;
 }
 
-function buildDailySeries(data: AuthAnalytics): DailySeries {
-  const dayKeys: string[] = [];
+function buildDaily(data: AuthAnalytics): DailyChartData {
   const dayStart = new Date(data.windowStart);
   dayStart.setUTCHours(0, 0, 0, 0);
   const dayEnd = new Date(data.windowEnd);
   dayEnd.setUTCHours(0, 0, 0, 0);
+  const days: string[] = [];
   for (
     let d = new Date(dayStart);
     d.getTime() <= dayEnd.getTime();
     d.setUTCDate(d.getUTCDate() + 1)
   ) {
-    dayKeys.push(d.toISOString().slice(0, 10));
+    days.push(d.toISOString().slice(0, 10));
   }
 
-  const seenPlatforms = new Set<string | null>();
-  for (const r of data.logins.dailyLast30d) seenPlatforms.add(r.platform);
-  const platforms = Array.from(seenPlatforms);
+  const seen = new Set<string | null>();
+  for (const r of data.logins.dailyLast30d) seen.add(r.platform);
+  const platforms = PLATFORM_ORDER.filter((p) => seen.has(p));
 
-  const counts: Record<string, number[]> = {};
-  for (const p of platforms) {
-    counts[p ?? "__null"] = new Array(dayKeys.length).fill(0);
+  const byDay = new Map<string, Record<string, string | number>>();
+  for (const day of days) {
+    const row: Record<string, string | number> = { day, total: 0 };
+    for (const p of platforms) row[p ?? "__null"] = 0;
+    byDay.set(day, row);
   }
-  const dayIdx = new Map(dayKeys.map((d, i) => [d, i] as const));
-  let max = 0;
   for (const r of data.logins.dailyLast30d) {
-    const idx = dayIdx.get(r.day);
-    if (idx === undefined) continue;
+    const row = byDay.get(r.day);
+    if (!row) continue;
     const key = r.platform ?? "__null";
-    counts[key][idx] = (counts[key][idx] ?? 0) + r.count;
-    // Track max day-total for scaling
+    row[key] = (row[key] as number) + r.count;
+    row.total = (row.total as number) + r.count;
   }
-  for (let i = 0; i < dayKeys.length; i++) {
-    let day = 0;
-    for (const p of platforms) day += counts[p ?? "__null"][i] ?? 0;
-    if (day > max) max = day;
-  }
-  return { days: dayKeys, platforms, counts, maxCount: max };
-}
-
-function DailyChart({ series }: { series: DailySeries }) {
-  const barWidth = 100 / series.days.length;
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {series.platforms.map((p) => (
-          <div key={p ?? "__null"} className="flex items-center gap-1.5">
-            <span
-              className={
-                "inline-block h-2.5 w-2.5 rounded-sm " + colorFor(p)
-              }
-            />
-            <span className="text-xs text-slate-600">
-              {platformLabel(p)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div
-        className="relative overflow-hidden rounded border border-slate-200 bg-slate-50"
-        style={{ height: 200 }}
-        aria-label={`Daily sign-ins for the last ${series.days.length} days`}
-      >
-        {series.days.map((day, i) => {
-          let offset = 0;
-          const totalForDay = series.platforms.reduce(
-            (n, p) => n + (series.counts[p ?? "__null"][i] ?? 0),
-            0,
-          );
-          return (
-            <div
-              key={day}
-              className="absolute bottom-0"
-              style={{
-                left: `${i * barWidth}%`,
-                width: `${barWidth}%`,
-                paddingLeft: 1,
-                paddingRight: 1,
-                height: series.maxCount
-                  ? `${(totalForDay / series.maxCount) * 100}%`
-                  : 0,
-              }}
-              title={`${day} · ${totalForDay} sign-ins`}
-            >
-              <div className="flex h-full w-full flex-col-reverse overflow-hidden rounded-sm">
-                {series.platforms.map((p) => {
-                  const c = series.counts[p ?? "__null"][i] ?? 0;
-                  if (c === 0) return null;
-                  const height =
-                    totalForDay > 0 ? (c / totalForDay) * 100 : 0;
-                  const el = (
-                    <div
-                      key={p ?? "__null"}
-                      className={colorFor(p)}
-                      style={{ height: `${height}%` }}
-                    />
-                  );
-                  offset += height;
-                  return el;
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex justify-between text-xs text-slate-500">
-        <span>{series.days[0]}</span>
-        <span>Max day: {formatNumber(series.maxCount)}</span>
-        <span>{series.days[series.days.length - 1]}</span>
-      </div>
-    </div>
-  );
+  return { rows: days.map((d) => byDay.get(d)!), platforms };
 }
