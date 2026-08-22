@@ -42,16 +42,19 @@ import { SendPushSheet } from "@/components/admin/users/send-push-sheet";
 import { EditContactSheet } from "@/components/admin/users/edit-contact-sheet";
 import type {
   AdminUserExamRow,
+  AuthLoginEvent,
   Paginated,
   Subscription,
   User,
 } from "@/types/api";
+import { PlatformBadge } from "@/components/admin/shared/platform-badge";
 
 interface UserDetailResponse {
   user: User;
   subscriptions: Subscription[];
   examsCount: number;
   aiUsage: { calls: string; cost: string } | null;
+  loginEvents: AuthLoginEvent[];
 }
 
 export default function UserDetailPage({
@@ -189,6 +192,10 @@ export default function UserDetailPage({
               ) : (
                 <Badge variant="destructive">Banned</Badge>
               )}
+              <span className="ml-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+                Signed up on
+                <PlatformBadge platform={user.signupPlatform} />
+              </span>
             </div>
           </div>
         </CardContent>
@@ -318,6 +325,61 @@ export default function UserDetailPage({
                   </TableRow>
                 );
               })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle>Sign-in history</CardTitle>
+          <span className="text-xs text-slate-500">
+            Last 20 real sign-ins — refresh-token rotations excluded
+          </span>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Event</TableHead>
+                <TableHead>IP</TableHead>
+                <TableHead>Device</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.loginEvents.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-8 text-center text-slate-500"
+                  >
+                    No sign-in events yet. This user hasn&apos;t signed
+                    in since we started recording, or the record was
+                    purged.
+                  </TableCell>
+                </TableRow>
+              )}
+              {data.loginEvents.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="text-xs text-slate-500">
+                    {formatDateTime(e.createdAt)}
+                  </TableCell>
+                  <TableCell>
+                    <PlatformBadge platform={e.platform} />
+                  </TableCell>
+                  <TableCell className="text-xs capitalize text-slate-700">
+                    {e.eventType}
+                  </TableCell>
+                  <TableCell className="font-mono text-[11px] text-slate-500">
+                    {e.ipAddress ?? "—"}
+                  </TableCell>
+                  <TableCell className="font-mono text-[11px] text-slate-500">
+                    {e.deviceId ? e.deviceId.slice(0, 12) + "…" : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>

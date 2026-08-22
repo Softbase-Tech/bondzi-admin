@@ -38,6 +38,9 @@ export const QK = {
 
   // AI
   AI_USAGE: (period: string) => ["ai", "usage", period] as const,
+
+  // Auth analytics — signup + login events by platform
+  AUTH_ANALYTICS: () => ["analytics", "auth"] as const,
   AI_EXPLANATIONS_PENDING: () => ["ai", "explanations", "pending"] as const,
   EXPLANATION_DETAIL: (questionId: string) =>
     ["explanations", questionId] as const,

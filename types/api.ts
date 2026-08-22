@@ -130,6 +130,28 @@ export interface User {
   longestStreak: number;
   referralCount?: number;
   lastActiveAt: string | null;
+  /**
+   * Platform the account was created from ('web' | 'ios' | 'android' |
+   * 'admin-web'), sourced from the X-Platform header at register time.
+   * Null for legacy rows that predate the header (accounts created
+   * before 2026-08-15).
+   */
+  signupPlatform: string | null;
+  createdAt: string;
+}
+
+/**
+ * One row in `auth_login_events` — durable, append-only record of every
+ * real sign-in (register / login / google / otp). Refresh-token
+ * rotations are NOT recorded here.
+ */
+export interface AuthLoginEvent {
+  id: string;
+  userId: string;
+  platform: string | null;
+  eventType: "register" | "login" | "google" | "otp" | string;
+  deviceId: string | null;
+  ipAddress: string | null;
   createdAt: string;
 }
 

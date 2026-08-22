@@ -116,6 +116,11 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Users & Revenue",
     items: [
       { href: "/admin/users", label: "Users", icon: Users },
+      {
+        href: "/admin/analytics/auth",
+        label: "Auth analytics",
+        icon: BarChart3,
+      },
       { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
       { href: "/admin/payments", label: "Payments", icon: FileSpreadsheet },
       {

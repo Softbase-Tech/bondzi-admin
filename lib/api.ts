@@ -53,6 +53,11 @@ api.interceptors.request.use(async (config) => {
   }
   // Mint per request — each browser-side call is a distinct user action.
   config.headers["X-Request-ID"] = newRequestId();
+  // Auth platform telemetry (backend `signup_platform` + `auth_login_events`).
+  // Admin sign-ins are distinct from student web sign-ins even though both
+  // are browsers — send a distinct value so login/signup analytics can tell
+  // them apart.
+  config.headers["X-Platform"] = "admin-web";
   return config;
 });
 
@@ -132,6 +137,7 @@ export function serverApi(
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
       "X-Request-ID": opts?.requestId ?? newRequestId(),
+      "X-Platform": "admin-web",
     },
   });
 }
