@@ -262,6 +262,14 @@ export interface PmTestQuestion {
   difficulty: Difficulty;
   status: QuestionStatus;
   generationBatchId: string | null;
+  /**
+   * Automated answer-key verification outcome for AI-generated questions:
+   * 'agreed' — an independent verifier pass reached the same key;
+   * 'key_mismatch' — the verifier disagreed with the stored key;
+   * 'verifier_error' — the verifier pass failed to run;
+   * null — not verified (or generated before verification existed).
+   */
+  verificationStatus?: "agreed" | "key_mismatch" | "verifier_error" | null;
   timesAnswered: number;
   timesCorrect: number;
   createdAt: string;
@@ -1370,4 +1378,44 @@ export interface SyllabusSummaryRow {
   subjectId: string;
   draft: number;
   approved: number;
+}
+
+// ---------- Learning materials (AI Knowledge Layer textbook chunks) ----------
+
+export type LearningMaterialChunkType =
+  | "key_ideas"
+  | "introduction"
+  | "example"
+  | "activity"
+  | "content";
+
+/**
+ * One extracted textbook chunk. Mirrors the backend
+ * `GET /admin/syllabus/learning-materials` row shape.
+ */
+export interface LearningMaterialChunk {
+  id: string;
+  subjectId: string;
+  formLevel: number;
+  strandCode: string;
+  subStrandCode: string;
+  sectionCode: string;
+  sectionTitle: string;
+  chunkType: LearningMaterialChunkType;
+  bodyMd: string;
+  sourcePdf: string;
+  sourcePage: number;
+  syllabusTopicId: string | null;
+  embeddingModel: string | null;
+  embeddedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `GET /admin/syllabus/learning-materials/coverage/:subjectId` */
+export interface LearningMaterialCoverage {
+  total: number;
+  embedded: number;
+  topicLinked: number;
+  byType: Record<string, number>;
 }

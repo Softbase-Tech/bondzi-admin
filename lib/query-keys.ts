@@ -141,6 +141,11 @@ export const QK = {
   SYLLABUS_INDICATORS: (filters: Record<string, unknown>) =>
     ["syllabus", "indicators", filters] as const,
   SYLLABUS_SUMMARY: () => ["syllabus", "summary"] as const,
+  // Learning materials (AI Knowledge Layer textbook chunks)
+  LEARNING_MATERIALS: (filters: Record<string, unknown>) =>
+    ["learning-materials", "list", filters] as const,
+  LEARNING_MATERIALS_COVERAGE: (subjectId: string) =>
+    ["learning-materials", "coverage", subjectId] as const,
   // Achievements catalogue
   ACHIEVEMENTS: () => ["achievements", "admin"] as const,
   // FAQ knowledge base
