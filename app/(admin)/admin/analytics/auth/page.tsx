@@ -46,6 +46,17 @@ import { formatDate, formatNumber } from "@/lib/utils";
  *   3. What's the daily cadence? A per-platform bar chart of daily
  *      sign-in counts for the last 30 days.
  *
+ * Scope: **student accounts only**. The backend filters every aggregate
+ * to `role = 'student'`, so operator sign-ins (admin / superadmin /
+ * teacher) never appear here — a few staff logging into this console
+ * many times a day would otherwise sit in the same bars as real
+ * acquisition. Operator activity is still visible per-account on
+ * `/admin/users/[id]`, which is unfiltered by design.
+ *
+ * A consequence worth knowing: the "Admin" pill will not show up on this
+ * page. `normalise()` and the chart both drop zero-count platforms, so
+ * the bucket disappears rather than rendering an empty column.
+ *
  * Data is cheap to compute (grouped counts on indexed columns) so we
  * refetch on tab focus — no cache-buster needed.
  */
@@ -105,7 +116,7 @@ export default function AuthAnalyticsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Auth analytics"
-        description={`Signups and sign-ins by platform · window ${formatDate(
+        description={`Student signups and sign-ins by platform · window ${formatDate(
           data.windowStart,
         )} – ${formatDate(data.windowEnd)}`}
       />

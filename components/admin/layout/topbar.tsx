@@ -17,6 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { initials } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
+import { MobileNavTrigger } from "./mobile-nav";
+import { BrandMark } from "./brand-mark";
 
 /**
  * Builds breadcrumbs from the pathname. `/admin/users/123` →
@@ -52,22 +54,36 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 sm:gap-4 sm:px-4">
+      {/* Below `md` the rail is not rendered, so the topbar carries both
+          the way into navigation and the product identity the rail would
+          otherwise provide. */}
+      <MobileNavTrigger />
+      <div className="min-w-0 md:hidden">
+        <BrandMark wordmarkClassName="hidden sm:inline" />
+      </div>
+
       <nav
         aria-label="Breadcrumb"
-        className="hidden md:flex items-center gap-1 text-sm text-slate-500"
+        className="hidden min-w-0 md:flex items-center gap-1 text-sm text-slate-500"
       >
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1;
           return (
-            <span key={c.href} className="flex items-center gap-1">
-              {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-slate-300" />}
+            <span key={c.href} className="flex min-w-0 items-center gap-1">
+              {/* Only the final crumb is shown below `lg`, so its separator
+                  would otherwise render as a stray leading chevron. */}
+              {i > 0 && (
+                <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-slate-300 lg:block" />
+              )}
               {last ? (
-                <span className="capitalize text-slate-900 font-medium">{c.label}</span>
+                <span className="truncate capitalize text-slate-900 font-medium">
+                  {c.label}
+                </span>
               ) : (
                 <Link
                   href={c.href}
-                  className="capitalize hover:text-slate-900"
+                  className="hidden truncate capitalize hover:text-slate-900 lg:inline"
                 >
                   {c.label}
                 </Link>
@@ -79,7 +95,7 @@ export function Topbar() {
 
       <div className="flex-1" />
 
-      <form onSubmit={submit} className="relative w-64 hidden lg:block">
+      <form onSubmit={submit} className="relative hidden w-48 xl:w-64 lg:block">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <Input
           key={stateKey}
@@ -94,7 +110,7 @@ export function Topbar() {
       <ThemeToggle />
 
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <DropdownMenuTrigger className="flex shrink-0 items-center gap-2 rounded-md px-1.5 py-1 hover:bg-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2">
           <Avatar>
             <AvatarFallback>{initials(data?.user?.name)}</AvatarFallback>
           </Avatar>

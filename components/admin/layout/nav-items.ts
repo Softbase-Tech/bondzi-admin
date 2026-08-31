@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   Inbox,
   LayoutDashboard,
+  Library,
   ListChecks,
   MessageSquare,
   Monitor,
@@ -201,6 +202,11 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/admin/syllabus",
         label: "Syllabus review",
         icon: BookOpen,
+      },
+      {
+        href: "/admin/syllabus/materials",
+        label: "Learning materials",
+        icon: Library,
       },
       {
         href: "/admin/config/achievements",

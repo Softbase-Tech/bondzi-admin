@@ -12,7 +12,7 @@ export default function TeacherLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-dvh bg-slate-50">
       <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4">
         <Link href="/school" className="flex items-center gap-2 font-semibold">
           <Image
@@ -27,7 +27,7 @@ export default function TeacherLayout({
           Bondzi · Teacher
         </Link>
       </header>
-      <main className="p-6">{children}</main>
+      <main className="p-4 sm:p-6">{children}</main>
     </div>
   );
 }

@@ -390,6 +390,7 @@ export default function PmTestReviewPage() {
               <TableHead>Difficulty</TableHead>
               <TableHead className="text-right">Options</TableHead>
               <TableHead>Expl.</TableHead>
+              <TableHead>Verified</TableHead>
               <TableHead>Batch</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -398,7 +399,7 @@ export default function PmTestReviewPage() {
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   </TableRow>
@@ -430,6 +431,9 @@ export default function PmTestReviewPage() {
                       ) : (
                         <X className="h-4 w-4 text-slate-300" />
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <VerificationBadge status={q.verificationStatus} />
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-slate-500">
                       {q.generationBatchId
@@ -474,7 +478,7 @@ export default function PmTestReviewPage() {
                 ))}
             {!isLoading && (data?.items.length ?? 0) === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-slate-500">
+                <TableCell colSpan={10} className="py-10 text-center text-slate-500">
                   Queue is empty.
                 </TableCell>
               </TableRow>
@@ -499,4 +503,27 @@ export default function PmTestReviewPage() {
       />
     </div>
   );
+}
+
+/**
+ * Answer-key verification outcome badge. `agreed` means an independent
+ * verifier pass reached the same key; `key_mismatch` flags rows the
+ * reviewer should scrutinise before approving. Rows generated before
+ * verification existed carry null and render as a plain dash.
+ */
+function VerificationBadge({
+  status,
+}: {
+  status: PmTestQuestion["verificationStatus"];
+}) {
+  switch (status) {
+    case "agreed":
+      return <Badge variant="success">agreed</Badge>;
+    case "key_mismatch":
+      return <Badge variant="destructive">key mismatch</Badge>;
+    case "verifier_error":
+      return <Badge variant="warning">verifier error</Badge>;
+    default:
+      return <span className="text-slate-300">—</span>;
+  }
 }

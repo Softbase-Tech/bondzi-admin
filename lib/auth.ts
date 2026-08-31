@@ -18,6 +18,21 @@ interface LoginSuccess {
 }
 
 /**
+ * Value sent as `X-Platform` on every backend call this module makes.
+ *
+ * The backend stamps this header onto `auth_login_events.platform`, which is
+ * what drives the operator/student split in auth analytics. `lib/api.ts`
+ * already sends it on regular API traffic — but the call that actually MINTS
+ * a login event is the `/auth/login` POST below, which runs server-side
+ * inside NextAuth's `authorize()` and never passes through that axios
+ * instance. Omitting it here is why every admin sign-in landed as NULL and
+ * rendered as "Unknown".
+ *
+ * Keep in lockstep with `lib/api.ts` and the backend `ClientPlatform` enum.
+ */
+const ADMIN_PLATFORM = "admin-web";
+
+/**
  * NextAuth v5 configuration.
  *
  * Delegates identity to the NestJS backend's /auth/login. Students never
@@ -61,6 +76,7 @@ export const authConfig: NextAuthConfig = {
               headers: {
                 "Content-Type": "application/json",
                 "X-Device-ID": deviceId,
+                "X-Platform": ADMIN_PLATFORM,
               },
               body: JSON.stringify({ email, password, deviceId }),
             },
@@ -191,7 +207,10 @@ async function refreshBackendTokens(refreshToken: string | undefined): Promise<{
       `${process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Platform": ADMIN_PLATFORM,
+        },
         body: JSON.stringify({ refreshToken }),
       },
     );
