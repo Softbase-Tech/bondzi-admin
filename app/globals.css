@@ -233,3 +233,47 @@ body {
 .dark .recharts-tooltip-item {
   color: var(--color-foreground) !important;
 }
+
+/* ---------------------------------------------------------------------------
+ * Horizontal-scroll affordance for wide tables.
+ *
+ * Admin tables carry 8–12 columns; on a phone they scroll sideways inside
+ * their card. Desktop shows a scrollbar, but mobile browsers hide it until
+ * the user is already scrolling — so a cut-off column looks like a broken
+ * layout rather than a scrollable region.
+ *
+ * This is the CSS-only shadow trick: four backgrounds on the scroll
+ * container. The two "cover" gradients are painted in the surface colour
+ * and pinned to the content (`background-attachment: local`), so they ride
+ * along with the scroll; the two shadows are pinned to the viewport
+ * (`scroll`). At the start of the scroll range the left cover sits exactly
+ * over the left shadow and hides it; scroll right and the cover moves away,
+ * revealing the shadow. The result is a shadow that appears only on the
+ * side that actually has more content — with no scroll listener, no
+ * ResizeObserver, and no JS at all on a page that may hold hundreds of rows.
+ *
+ * `--color-white` is the card surface and is remapped by `.dark`, so this
+ * follows the theme without a second rule.
+ * ------------------------------------------------------------------------ */
+.table-scroll-x {
+  background-image:
+    linear-gradient(to right, var(--color-white) 30%, transparent),
+    linear-gradient(to left, var(--color-white) 30%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 0.16), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 0.16), transparent);
+  background-position: left center, right center, left center, right center;
+  background-repeat: no-repeat;
+  background-size: 36px 100%, 36px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* The shadow half of `.table-scroll-x` is a black glow, which is invisible
+   against a dark card. Dark mode gets a light one instead; the two cover
+   gradients already follow `--color-white` and need no change. */
+.dark .table-scroll-x {
+  background-image:
+    linear-gradient(to right, var(--color-white) 30%, transparent),
+    linear-gradient(to left, var(--color-white) 30%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(255 255 255 / 0.16), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgb(255 255 255 / 0.16), transparent);
+}

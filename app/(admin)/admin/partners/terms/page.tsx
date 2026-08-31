@@ -229,7 +229,7 @@ function DraftForm({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <NumField
           label="Plus WASSCE (GHS)"
           value={form.plusWassce}
@@ -247,7 +247,7 @@ function DraftForm({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <NumField
           label="Signup batch size"
           type="int"
@@ -273,7 +273,7 @@ function DraftForm({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <NumField
           label="Answers bonus threshold"
           type="int"

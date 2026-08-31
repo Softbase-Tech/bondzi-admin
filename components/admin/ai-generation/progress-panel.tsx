@@ -65,7 +65,7 @@ export function JobProgressPanel({ jobId }: { jobId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-xs">
         <div>
           <div className="uppercase tracking-wide text-slate-500">Rate</div>
           <div className="font-semibold text-slate-900">

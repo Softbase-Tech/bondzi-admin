@@ -41,7 +41,7 @@ export const DialogContent = React.forwardRef<
         // button stays pinned because it's `position:absolute` relative
         // to this `position:fixed` container, which doesn't scroll —
         // only its child content does.
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg max-h-[calc(100vh-4rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-lg outline-none",
+        "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-lg outline-none sm:max-h-[calc(100dvh-4rem)] sm:p-6",
         className,
       )}
       {...props}

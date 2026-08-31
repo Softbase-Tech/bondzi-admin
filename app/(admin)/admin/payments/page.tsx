@@ -100,12 +100,12 @@ export default function PaymentsPage() {
         description="Every checkout attempt we initiated, regardless of outcome. Use the status filter to drill into specific operational concerns — e.g. refund triage, or abandoned-cart sweeps."
       />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
           value={statusFilter}
           onValueChange={(v) => setStatusFilter(v as PaymentAttemptStatus | "all")}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -121,7 +121,7 @@ export default function PaymentsPage() {
           value={alarmFilter}
           onValueChange={(v) => setAlarmFilter(v as AlarmFilter)}
         >
-          <SelectTrigger className="w-72">
+          <SelectTrigger className="w-full sm:w-72">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -101,14 +101,14 @@ export default function BillingLogPage() {
         description="Append-only sink for every inbound webhook, with verbatim payload + processing audit. Filter by alarm status to spot webhooks for payments we never initiated — a fraud / mis-routing signal."
       />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
           value={statusFilter}
           onValueChange={(v) =>
             setStatusFilter(v as BillingLogProcessStatus | "all")
           }
         >
-          <SelectTrigger className="w-72">
+          <SelectTrigger className="w-full sm:w-72">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

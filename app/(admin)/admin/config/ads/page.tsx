@@ -151,7 +151,7 @@ export default function AdsConfigPage() {
               <CardTitle className="text-base">Rewarded & caps</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label>Rewarded XP amount</Label>
                   <Input
