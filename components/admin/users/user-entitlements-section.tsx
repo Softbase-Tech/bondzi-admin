@@ -172,7 +172,7 @@ function EntitlementRow({
   const isPaid = ent.account !== "free";
   return (
     <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-sm font-medium text-slate-900 sm:w-44">
           {LEVEL_LABEL[ent.level]}
         </span>

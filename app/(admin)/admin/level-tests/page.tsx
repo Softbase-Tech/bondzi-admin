@@ -483,7 +483,7 @@ export default function LevelTestsPage() {
         </form>
 
         {selected.size > 0 && (
-          <div className="flex items-center gap-2 rounded-md border border-pm-orange/40 bg-pm-orange-light/40 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-accent/40 px-3 py-2">
             <span className="text-sm text-slate-700">
               {selected.size} selected
             </span>
@@ -634,7 +634,7 @@ export default function LevelTestsPage() {
                   No Level Test questions match your filters.{" "}
                   <Link
                     href="/admin/pm-test/generate"
-                    className="text-pm-orange underline underline-offset-2"
+                    className="text-primary underline underline-offset-2"
                   >
                     Generate more →
                   </Link>

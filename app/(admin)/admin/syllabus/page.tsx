@@ -146,9 +146,11 @@ export default function SyllabusReviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center justify-between">
+          {/* Title + two action buttons: ~300px of content that cannot fit
+              one line on a 320px screen, so the actions wrap beneath. */}
+          <CardTitle className="text-base flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span>Indicators {total > 0 ? `(${total})` : ""}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
