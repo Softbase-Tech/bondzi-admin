@@ -37,6 +37,7 @@ export default function NotificationsPage() {
       body: "",
       channels: ["in_app"],
       segment: "all",
+      emailFallbackOnly: true,
     },
   });
 
@@ -52,7 +53,7 @@ export default function NotificationsPage() {
 
   const channels = form.watch("channels");
 
-  function toggleChannel(ch: "push" | "sms" | "in_app") {
+  function toggleChannel(ch: "push" | "sms" | "in_app" | "email") {
     const set = new Set(channels);
     set.has(ch) ? set.delete(ch) : set.add(ch);
     form.setValue("channels", [...set] as NotificationFormData["channels"], {
@@ -64,7 +65,7 @@ export default function NotificationsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Notifications"
-        description="Send a targeted push/SMS/in-app message. Dispatched via BullMQ."
+        description="Send a targeted push/SMS/in-app/email message. Push reaches every registered device — the mobile app and web browsers alike. Dispatched via BullMQ."
       />
 
       <SendToOneUserCard />
@@ -99,7 +100,7 @@ export default function NotificationsPage() {
             <div className="flex flex-col gap-1.5">
               <Label>Channels</Label>
               <div className="flex gap-4">
-                {(["push", "sms", "in_app"] as const).map((ch) => (
+                {(["push", "sms", "in_app", "email"] as const).map((ch) => (
                   <label key={ch} className="flex items-center gap-2 text-sm">
                     <Checkbox
                       checked={channels.includes(ch)}
@@ -115,6 +116,29 @@ export default function NotificationsPage() {
                 </p>
               )}
             </div>
+            {channels.includes("email") && channels.includes("push") ? (
+              <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/40 p-3">
+                <label className="flex items-start gap-2 text-sm">
+                  <Checkbox
+                    checked={form.watch("emailFallbackOnly") !== false}
+                    onCheckedChange={(v) =>
+                      form.setValue("emailFallbackOnly", v === true)
+                    }
+                  />
+                  <span>
+                    <span className="font-medium">
+                      Email as push fallback only
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      On (recommended): email goes only to users with no
+                      push-capable device, so nobody is notified twice and
+                      Resend volume stays minimal. Off: every user in the
+                      segment gets the email too — a deliberate full blast.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <Label>Segment</Label>
               <Select
