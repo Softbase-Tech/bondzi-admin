@@ -138,10 +138,12 @@ export default function UserDetailPage({
 
       <Card>
         <CardContent className="flex items-center gap-4 pt-4">
-          <Avatar className="h-16 w-16 text-base">
+          <Avatar className="h-16 w-16 shrink-0 text-base">
             <AvatarFallback>{initials(user.fullName)}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col gap-1">
+          {/* min-w-0: without it this column takes the intrinsic width of its
+              widest child (a long email) and pushes the rest out of the card. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             {user.username ? (
               <span className="font-mono text-sm text-slate-700">
                 @{user.username}
@@ -151,23 +153,24 @@ export default function UserDetailPage({
                 no username set
               </span>
             )}
-            <div className="flex items-center gap-2 text-slate-500">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-500">
               {user.email ? (
-                <span className="flex items-center gap-1 text-xs">
-                  <Mail className="h-3 w-3" /> {user.email}
+                <span className="flex min-w-0 items-center gap-1 text-xs">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span className="break-all">{user.email}</span>
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-xs text-slate-400">
-                  <Mail className="h-3 w-3" /> no email
+                  <Mail className="h-3 w-3 shrink-0" /> no email
                 </span>
               )}
               {user.phone ? (
                 <span className="flex items-center gap-1 text-xs">
-                  <Phone className="h-3 w-3" /> {user.phone}
+                  <Phone className="h-3 w-3 shrink-0" /> {user.phone}
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-xs text-slate-400">
-                  <Phone className="h-3 w-3" /> no phone
+                  <Phone className="h-3 w-3 shrink-0" /> no phone
                 </span>
               )}
               <EditContactSheet
@@ -177,7 +180,7 @@ export default function UserDetailPage({
                 initialPhone={user.phone}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="capitalize">
                 {user.role}
               </Badge>
@@ -192,7 +195,7 @@ export default function UserDetailPage({
               ) : (
                 <Badge variant="destructive">Banned</Badge>
               )}
-              <span className="ml-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+              <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
                 Signed up on
                 <PlatformBadge platform={user.signupPlatform} />
               </span>
@@ -201,7 +204,10 @@ export default function UserDetailPage({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Three one-number cards stacked full-width cost three screens of
+          scrolling on a phone for three values. Two-up on mobile keeps each
+          readable while halving the scroll. */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Exams completed</CardTitle>

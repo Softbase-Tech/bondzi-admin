@@ -384,7 +384,7 @@ export default function LevelTestDetailPage() {
                         d ? { ...d, syllabusTopicId: null } : d,
                       )
                     }
-                    className="text-xs text-pm-orange hover:underline"
+                    className="text-xs text-primary hover:underline"
                   >
                     Clear
                   </button>
