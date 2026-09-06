@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { AlertTriangle, BarChart3, PlayCircle } from "lucide-react";
+import { AlertTriangle, BarChart3, Globe, PlayCircle } from "lucide-react";
 import { api, unwrap } from "@/lib/api";
 import { QK } from "@/lib/query-keys";
 import { PageHeader } from "@/components/admin/layout/page-header";
@@ -21,13 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { AdConfig } from "@/types/api";
+import type { AdConfig, WebAdsConfig } from "@/types/api";
 
 export default function AdsConfigPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: QK.ADS_CONFIG(),
-    queryFn: () => unwrap<AdConfig>(api.get("/admin/config/ads")),
+    queryFn: () => unwrap<AdConfig>(api.get("/admin/ads/config")),
   });
 
   const [form, setForm] = useState<Partial<AdConfig>>({});
@@ -37,7 +37,7 @@ export default function AdsConfigPage() {
   }, [data]);
 
   const saveMut = useMutation({
-    mutationFn: () => unwrap(api.patch("/admin/config/ads", form)),
+    mutationFn: () => unwrap(api.patch("/admin/ads/config", form)),
     onSuccess: () => {
       toast.success("Ads config saved");
       qc.invalidateQueries({ queryKey: QK.ADS_CONFIG() });
@@ -48,6 +48,52 @@ export default function AdsConfigPage() {
 
   const up = <K extends keyof AdConfig>(key: K, value: AdConfig[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const webAds: WebAdsConfig = form.webAds ?? {};
+  const upWeb = (patch: Partial<WebAdsConfig>) =>
+    setForm((prev) => ({
+      ...prev,
+      webAds: { ...(prev.webAds ?? {}), ...patch },
+    }));
+  const upPlacement = (
+    key: string,
+    patch: Partial<NonNullable<WebAdsConfig["placements"]>[string]>,
+  ) =>
+    setForm((prev) => {
+      const cur = prev.webAds ?? {};
+      const placements = { ...(cur.placements ?? {}) };
+      placements[key] = { ...(placements[key] ?? {}), ...patch };
+      return { ...prev, webAds: { ...cur, placements } };
+    });
+
+  const WEB_PLACEMENTS: Array<{
+    key: string;
+    label: string;
+    hint: string;
+    hasAfterBlock?: boolean;
+  }> = [
+    {
+      key: "blog_inline",
+      label: "Blog — in-article",
+      hint: "Injected after the Nth content block of every public post.",
+      hasAfterBlock: true,
+    },
+    {
+      key: "blog_footer",
+      label: "Blog — end of article",
+      hint: "Between the article body and the app CTA card.",
+    },
+    {
+      key: "landing_mid",
+      label: "Landing — below the fold",
+      hint: "Not wired on the site yet — reserved.",
+    },
+    {
+      key: "app_dashboard",
+      label: "Web app — dashboard (free tier)",
+      hint: "Not wired on the site yet — reserved.",
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -197,7 +243,96 @@ export default function AdsConfigPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Globe className="h-4 w-4" /> Website ads (AdSense)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-xs text-muted-foreground max-w-3xl">
+                Placements on bondzi.online. Create one ad unit per
+                placement in the AdSense account and paste its numeric
+                slot id here — revenue then reports per placement. The
+                site picks changes up within ~5 minutes, no deploy.
+              </p>
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <div className="text-sm font-medium">Website ads enabled</div>
+                  <div className="text-xs text-muted-foreground">
+                    Master switch for every web placement below.
+                  </div>
+                </div>
+                <Switch
+                  checked={webAds.enabled ?? false}
+                  onCheckedChange={(v) => upWeb({ enabled: v })}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 max-w-md">
+                <Label htmlFor="web-pub">AdSense publisher ID</Label>
+                <Input
+                  id="web-pub"
+                  placeholder="ca-pub-…"
+                  value={webAds.publisherId ?? ""}
+                  onChange={(e) => upWeb({ publisherId: e.target.value })}
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                {WEB_PLACEMENTS.map((pl) => {
+                  const row = webAds.placements?.[pl.key] ?? {};
+                  return (
+                    <div
+                      key={pl.key}
+                      className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_auto_220px_120px] sm:items-center"
+                    >
+                      <div>
+                        <div className="text-sm font-medium">{pl.label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {pl.hint}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={row.enabled ?? false}
+                        onCheckedChange={(v) =>
+                          upPlacement(pl.key, { enabled: v })
+                        }
+                      />
+                      <Input
+                        placeholder="Slot id (numbers only)"
+                        value={row.slotId ?? ""}
+                        onChange={(e) =>
+                          upPlacement(pl.key, {
+                            slotId: e.target.value.replace(/\D/g, ""),
+                          })
+                        }
+                      />
+                      {pl.hasAfterBlock ? (
+                        <Input
+                          type="number"
+                          min={1}
+                          max={40}
+                          placeholder="After block"
+                          value={row.afterBlock ?? 6}
+                          onChange={(e) =>
+                            upPlacement(pl.key, {
+                              afterBlock: Math.max(
+                                1,
+                                parseInt(e.target.value, 10) || 6,
+                              ),
+                            })
+                          }
+                        />
+                      ) : (
+                        <div />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <CardTitle className="text-base flex items-center gap-2">
                 <PlayCircle className="h-4 w-4" /> Preview — what free users see
               </CardTitle>
             </CardHeader>
