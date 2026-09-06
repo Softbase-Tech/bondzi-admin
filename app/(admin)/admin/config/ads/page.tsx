@@ -37,7 +37,15 @@ export default function AdsConfigPage() {
   }, [data]);
 
   const saveMut = useMutation({
-    mutationFn: () => unwrap(api.patch("/admin/ads/config", form)),
+    // The form is seeded from the GET response, which carries the row's
+    // id/updatedAt — the PATCH DTO (rightly) rejects unknown props, so
+    // send only the editable fields.
+    mutationFn: () => {
+      const editable = { ...form } as Partial<AdConfig>;
+      delete editable.id;
+      delete editable.updatedAt;
+      return unwrap(api.patch("/admin/ads/config", editable));
+    },
     onSuccess: () => {
       toast.success("Ads config saved");
       qc.invalidateQueries({ queryKey: QK.ADS_CONFIG() });
@@ -311,7 +319,9 @@ export default function AdsConfigPage() {
                           type="number"
                           min={1}
                           max={40}
-                          placeholder="After block"
+                          aria-label="Insert after content block number"
+                          title="The ad is injected after this many content blocks (paragraphs/headings) of the article"
+                          placeholder="After block #"
                           value={row.afterBlock ?? 6}
                           onChange={(e) =>
                             upPlacement(pl.key, {
