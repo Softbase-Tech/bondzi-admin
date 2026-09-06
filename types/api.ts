@@ -1032,7 +1032,22 @@ export interface AdConfig {
   rewardedXpAmount: number;
   frequencyCap: number;
   triggerEvent: string;
+  webAds?: WebAdsConfig;
   updatedAt: string;
+}
+
+export interface WebAdPlacement {
+  enabled?: boolean;
+  slotId?: string;
+  /** blog_inline only: insert after the Nth content block. */
+  afterBlock?: number;
+}
+
+/** Website AdSense config (blog first). Lives on the same ad_config row. */
+export interface WebAdsConfig {
+  enabled?: boolean;
+  publisherId?: string;
+  placements?: Record<string, WebAdPlacement>;
 }
 
 // ---------- AI Study Review limits ----------
