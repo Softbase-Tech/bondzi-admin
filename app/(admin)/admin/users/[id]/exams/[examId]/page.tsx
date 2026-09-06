@@ -69,7 +69,7 @@ export default function UserExamDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={`Exam · ${exam.mode.replace(/_/g, " ")}`}
+        title={`Exam · ${modeLabel(exam.mode)}`}
         description={`Started ${formatDateTime(exam.startedAt)}${
           exam.completedAt
             ? ` · Completed ${formatDateTime(exam.completedAt)}`
@@ -122,13 +122,11 @@ export default function UserExamDetailPage({
         <SummaryStat label="XP earned">
           {formatNumber(exam.xpEarned)}
         </SummaryStat>
-        <SummaryStat label="Mode">
-          <span className="capitalize">{exam.mode.replace(/_/g, " ")}</span>
-        </SummaryStat>
-        <SummaryStat label="Question pool">
-          <span className="capitalize">
-            {exam.questionPool.replace(/_/g, " ")}
-          </span>
+        <SummaryStat label="Mode">{modeLabel(exam.mode)}</SummaryStat>
+        <SummaryStat label="Subject">
+          {exam.subjectNames?.length
+            ? exam.subjectNames.join(", ")
+            : "—"}
         </SummaryStat>
         {exam.durationSeconds != null && (
           <SummaryStat label="Time limit">
@@ -199,7 +197,7 @@ export default function UserExamDetailPage({
                   <TableCell className="text-xs">
                     {a.selectedOptionLabel ??
                       a.typedAnswer ?? (
-                        <span className="text-slate-400">(skipped)</span>
+                        <span className="text-slate-400">(unanswered)</span>
                       )}
                   </TableCell>
                   <TableCell className="text-xs font-medium">
@@ -252,4 +250,27 @@ function SummaryStat({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Student-facing names for exam modes — admins shouldn't have to
+ * translate enum keys ("pm test" is the Quiz feature in the app).
+ */
+function modeLabel(mode: string): string {
+  switch (mode) {
+    case "past_paper":
+      return "Past paper";
+    case "pm_test":
+      return "Quiz";
+    case "mock_exam":
+      return "Mock exam";
+    case "practice":
+      return "Practice";
+    case "topic_drill":
+      return "Topic drill";
+    case "srs_review":
+      return "SRS review";
+    default:
+      return mode.replace(/_/g, " ");
+  }
 }
