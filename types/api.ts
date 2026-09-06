@@ -555,6 +555,8 @@ export interface AdminUserExamRow {
   answeredCount: number;
   correctCount: number;
   accuracy: number;
+  /** Session subjects (from the exam's own filter, answers as fallback). */
+  subjectNames?: string[];
 }
 
 export interface AdminUserExamAnswer {
